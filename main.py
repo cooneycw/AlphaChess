@@ -1,6 +1,6 @@
 import chess
 from config.config import Config, SimulationCounter, MoveCounter
-from src_code.agent.agent import AlphaZeroChess, board_to_input
+from src_code.agent.agent import AlphaZeroChess, board_to_input, generate_training_data
 
 
 def main():
@@ -28,7 +28,7 @@ def main():
 
         # Update the network weights every 100 simulations or every 10 moves
         if simulations >= 100 or moves >= 10:
-            states, policy_targets, value_targets = generate_training_data()
+            states, policy_targets, value_targets = generate_training_data(agent, config, sim_counter)
             agent.update_network(states, policy_targets, value_targets)
             simulations = 0
             moves = 0

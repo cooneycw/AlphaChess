@@ -10,7 +10,7 @@ from keras.layers import Input, Conv2D, BatchNormalization, Activation, Add, Fla
 
 
 class AlphaZeroChess:
-    def __init__(self, config, redis_host='localhost', redis_port=6379):
+    def __init__(self, config, redis_host='192.168.5.77', redis_port=6379):
         self.config = config
         self.board = chess.Board()
         self.num_channels = 17
@@ -31,7 +31,7 @@ class AlphaZeroChess:
 
     def get_action(self, state):
         """Get the best action to take given the current state of the board."""
-        action_probs, _ = self.tree.search(state, num_iterations=self.config.num_iterations)
+        action_probs, _ = self.tree.search()
 
         # Add Dirichlet noise to the action probabilities
         alpha = self.config.dirichlet_alpha
@@ -238,7 +238,7 @@ class MCTSTree:
 
     def expand(self, node):
         # Generate all legal moves from the current state and create child nodes for each move
-        pi, v = self.value_net.predict(node.state)
+        pi, v = self.network.predict(node.state)  # look at node.state shape??
         legal_moves = get_legal_moves(node.state)
         for action in legal_moves:
             state = apply_move(self.config, node.state, action)
@@ -281,3 +281,40 @@ class Node:
         self.children = []
         self.parent = None
 
+
+def generate_training_data(agent, config, sim_counter):
+    # Initialize the lists to store the training data
+    states = []
+    policy_targets = []
+    value_targets = []
+
+    # Perform MCTS simulations to generate training data
+    for i in range(config.num_simulations):
+        # Start a new simulation from the root node
+        node = agent.tree.root
+        sim_states = [board_to_input(config, agent.board)]
+
+        # Perform the selection, expansion, simulation, and backpropagation steps of MCTS
+        while node.children:
+            node = agent.tree.select(node)
+            action = agent.tree.get_action(node)
+            agent.board.push_uci(action)
+            sim_states.append(board_to_input(config, agent.board))
+        agent.tree.expand(node)
+
+        # Get the value of the end state
+        value = agent.tree.simulate(agent, sim_counter)
+
+        # Backpropagate the value up the tree and collect the (state, policy, value) tuples
+        for j in range(len(sim_states)):
+            state = sim_states[j]
+            policy = agent.tree.children[j].prior_prob
+            states.append(state)
+            policy_targets.append(policy)
+            value_targets.append(value)
+
+        # Reset the board and MCTS tree to the initial state
+        agent.board.reset()
+        agent.tree = MCTSTree(agent)
+
+    return states, policy_targets, value_targets
