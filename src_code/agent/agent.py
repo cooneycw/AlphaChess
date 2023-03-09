@@ -1,8 +1,12 @@
 import chess
 import redis
+import math
+import copy
+import random
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
+from keras.layers import Input, Conv2D, BatchNormalization, Activation, Add, Flatten, Dense
 
 
 class AlphaZeroChess:
@@ -16,106 +20,24 @@ class AlphaZeroChess:
         self.redis = redis.StrictRedis(host=redis_host, port=redis_port, db=0)
 
         # Create the value network
-        self.value_network = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(64, 3, padding='same', activation='relu',
-                                   input_shape=(self.num_channels, 8, 8)),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(64, 3, padding='same', activation='relu'),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(64, 3, padding='same', activation='relu'),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(64, 3, padding='same', activation='relu'),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(256, activation='relu'),
-            tf.keras.layers.Dense(1, activation='tanh')
-        ])
 
-        # Create the policy network
-        self.policy_network = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(64, 3, padding='same', activation='relu',
-                                   input_shape=(self.num_channels, 8, 8)),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(64, 3, padding='same', activation='relu'),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(64, 3, padding='same', activation='relu'),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(64, 3, padding='same', activation='relu'),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(self.num_moves, activation='softmax')
-        ])
-
-    def load_model(self):
-        # Load the weights for the value network
-        value_weights = []
-        for i in range(len(self.value_network.layers)):
-            layer_name = f'value_layer_{i}'
-            weights_key = f'value_weights_{i}'
-            layer_weights = []
-            for j in range(len(self.value_network.layers[i].weights)):
-                weight_name = f'weight_{j}'
-                weight_key = f'{weights_key}_{weight_name}'
-                weight_value = self.redis.get(weight_key)
-                layer_weights.append(np.frombuffer(weight_value, dtype=np.float32))
-            value_weights.append(layer_weights)
-        self.value_network.set_weights(value_weights)
-
-        # Load the weights for the policy network
-        policy_weights = []
-        for i in range(len(self.policy_network.layers)):
-            layer_name = f'policy_layer_{i}'
-            weights_key = f'policy_weights_{i}'
-            layer_weights = []
-            for j in range(len(self.policy_network.layers[i].weights)):
-                weight_name = f'weight_{j}'
-                weight_key = f'{weights_key}_{weight_name}'
-                weight_value = self.redis.get(weight_key)
-                layer_weights.append(np.frombuffer(weight_value, dtype=np.float32))
-            policy_weights.append(layer_weights)
-        self.policy_network.set_weights(policy_weights)
-
-    def save_model(self):
-        # Save the weights for the value network
-        for i in range(len(self.value_network.layers)):
-            layer_name = f'value_layer_{i}'
-            weights_key = f'value_weights_{i}'
-            for j in range(len(self.value_network.layers[i].weights)):
-                weight_name = f'weight_{j}'
-                weight_key = f'{weights_key}_{weight_name}'
-                weight_value = self.value_network.layers[i].weights[j].numpy().tobytes()
-                self.redis.set(weight_key, weight_value)
-
-        # Save the weights for the policy network
-        for i in range(len(self.policy_network.layers)):
-            layer_name = f'policy_layer_{i}'
-            weights_key = f'policy_weights_{i}'
-            for j in range(len(self.policy_network.layers[i].weights)):
-                weight_name = f'weight_{j}'
-                weight_key = f'{weights_key}_{weight_name}'
-                weight_value = self.policy_network.layers[i].weights[j].numpy().tobytes()
-                self.redis.set(weight_key, weight_value)
-
-        class AlphaZero:
-            def __init__(self, game, redis_host='localhost', redis_port=6379):
-
-
-
-
-
-        # Initialize the neural network
-        self.policy_net = PolicyNet(config.board_size, config.num_channels)
-        self.value_net = ValueNet(config.board_size, config.num_channels)
-        self.optimizer = tf.keras.optimizers.SGD(learning_rate=config.learning_rate, momentum=config.momentum,
-                                                 decay=config.weight_decay)
+        self.network = create_network(config)
+        # Assign the optimizer to self.optimizer
+        self.optimizer = config.optimizer
+        self.state = board_to_input(config, self.board)
 
         # Initialize the MCTS tree
-        self.tree = MCTSTree(config.board_size, self.policy_net, self.value_net, self.optimizer,
-                             num_sims=config.num_sims, c_puct=config.c_puct, alpha=config.alpha)
+        self.tree = MCTSTree(self)
 
     def get_action(self, state):
         """Get the best action to take given the current state of the board."""
         action_probs, _ = self.tree.search(state, num_iterations=self.config.num_iterations)
+
+        # Add Dirichlet noise to the action probabilities
+        alpha = self.config.dirichlet_alpha
+        noise = np.random.dirichlet(alpha * np.ones(self.config.action_space_size))
+        action_probs = (1 - self.config.eps) * action_probs + self.config.eps * noise
+
         action = np.random.choice(len(action_probs), p=action_probs)
         return action
 
@@ -126,14 +48,236 @@ class AlphaZeroChess:
     def update_network(self, states, policy_targets, value_targets):
         """Update the neural network with the latest training data."""
         dataset = ChessDataset(states, policy_targets, value_targets)
-        dataloader = tf.data.Dataset.from_generator(lambda: dataset, (tf.float32, tf.float32, tf.float32)).batch(
-            self.config.batch_size)
+        dataloader = tf.data.Dataset.from_generator(lambda: dataset, (tf.float32, tf.float32, tf.float32)).batch(self.config.batch_size)
         for inputs, policy_targets, value_targets in dataloader:
             with tf.GradientTape() as tape:
-                policy_preds, value_preds = self.policy_net(inputs), self.value_net(inputs)
-                loss = compute_loss(policy_preds, policy_targets, value_preds, value_targets)
-            gradients = tape.gradient(loss, self.policy_net.trainable_variables + self.value_net.trainable_variables)
-            self.optimizer.apply_gradients(
-                zip(gradients, self.policy_net.trainable_variables + self.value_net.trainable_variables))
-        self.policy_net.eval()
-        self.value_net.eval()
+                value_preds, policy_preds = self.network(inputs)
+                value_loss = keras.losses.mean_squared_error(value_targets, value_preds)
+                policy_loss = keras.losses.categorical_crossentropy(policy_targets, policy_preds)
+                loss = value_loss + policy_loss
+            gradients = tape.gradient(loss, self.network.trainable_variables)
+            self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
+        self.network.eval()
+
+
+class ChessDataset:
+    def __init__(self, states, policy_targets, value_targets):
+        self.states = states
+        self.policy_targets = policy_targets
+        self.value_targets = value_targets
+
+    def __len__(self):
+        return len(self.states)
+
+    def __getitem__(self, index):
+        state = self.states[index]
+        policy_target = self.policy_targets[index]
+        value_target = self.value_targets[index]
+        return state, policy_target, value_target
+
+
+def board_to_input(config, board):
+    # Create an empty 8x8x17 tensor
+    input_tensor = np.zeros((config.board_size, config.board_size, config.num_channels))
+
+    # Encode the current player in the first channel
+    input_tensor[:, :, 0] = (board.turn * 1.0)
+
+    # Encode the piece positions in channels 2-13
+    piece_map = {'p': 0, 'n': 1, 'b': 2, 'r': 3, 'q': 4, 'k': 5}
+    for square, piece in board.piece_map().items():
+        if piece.color == chess.WHITE:
+            piece_idx = piece.piece_type - 1
+        else:
+            piece_idx = piece.piece_type - 1 + 6
+        input_tensor[chess.square_rank(square), chess.square_file(square), piece_idx] = 1
+
+    # Encode the fullmove number in channel 14
+    input_tensor[:, :, 13] = board.fullmove_number / 100.0
+
+    # Encode the halfmove clock in channel 15
+    input_tensor[:, :, 14] = board.halfmove_clock / 100.0
+
+    # Encode the remaining moves in channel 16
+    remaining_moves = (2 * 50) - board.fullmove_number
+    input_tensor[:, :, 15] = remaining_moves / 100.0
+
+    # Encode the remaining half-moves in channel 17
+    remaining_halfmoves = 100 - board.halfmove_clock
+    input_tensor[:, :, 16] = remaining_halfmoves / 100.0
+
+    return input_tensor
+
+
+def game_over(board):
+    return board.is_game_over()
+
+
+def get_result(board):
+    # Check if the game is over
+    if board.is_game_over():
+        # Check if the game ended in checkmate
+        if board.is_checkmate():
+            # Return 1 if white wins, 0 if black wins
+            return 1 if board.turn == chess.WHITE else 0
+        # Otherwise, the game ended in stalemate or other draw
+        return 0.5
+    # If the game is not over, return None
+    return None
+
+
+def make_move(board, action):
+    """
+    Apply the given action to the given board and return the resulting board.
+    """
+    new_board = copy.deepcopy(board)
+    new_board.push(action)
+    return new_board
+
+
+def get_legal_moves(board):
+    """
+    Return a list of all legal moves for the current player on the given board.
+    """
+    legal_moves = list(board.legal_moves)
+    return [move.uci() for move in legal_moves]
+
+
+def apply_move(config, board, action):
+    """
+    Apply the given action to the given board and return the resulting board state.
+    """
+    board.push_uci(action)
+    return board_to_input(config, board)
+
+
+def residual_block(x, filters):
+    y = Conv2D(filters, kernel_size=3, padding='same')(x)
+    y = BatchNormalization()(y)
+    y = Activation('relu')(y)
+    y = Conv2D(filters, kernel_size=3, padding='same')(y)
+    y = BatchNormalization()(y)
+    y = Add()([x, y])
+    y = Activation('relu')(y)
+    return y
+
+
+# Define the neural network
+def create_network(config):
+    # Input layer
+    inputs = Input(shape=(config.board_size, config.board_size, config.num_channels))
+
+    # Residual blocks
+    x = Conv2D(256, kernel_size=3, padding='same')(inputs)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    for i in range(4):
+        x = residual_block(x, 256)
+
+    # Value head
+    v = Conv2D(1, kernel_size=1, padding='same')(x)
+    v = BatchNormalization()(v)
+    v = Activation('relu')(v)
+    v = Flatten()(v)
+    v = Dense(256, activation='relu')(v)
+    v = Dense(1, activation='tanh', name='value')(v)
+
+    # Policy head
+    p = Conv2D(2, kernel_size=1, padding='same')(x)
+    p = BatchNormalization()(p)
+    p = Activation('relu')(p)
+    p = Flatten()(p)
+    p = Dense(config.action_space_size, activation='softmax', name='policy')(p)
+
+    model = tf.keras.Model(inputs=inputs, outputs=[v, p])
+    return model
+
+
+class MCTSTree:
+    def __init__(self, az):
+        self.root = Node(az.state)
+        self.network = az.network
+        self.config = az.config
+
+    def select(self, node):
+        # Select the child node with the highest UCT value
+        uct_values = []
+        for child in node.children:
+            q = child.total_value / child.visit_count if child.visit_count > 0 else 0
+            p = child.prior_prob
+            n = node.visit_count
+            n_a = child.visit_count
+            uct_value = q + self.config.c_puct * p * math.sqrt(n) / (1 + n_a)
+            uct_values.append(uct_value)
+        index = uct_values.index(max(uct_values))
+        return node.children[index]
+
+    def simulate(self, az, sim_counter):
+        # Increment the simulation counter
+        sim_counter.increment()
+        # Assign the initial board state to the state variable
+        state = az.board
+        # Simulate a game from the given state until the end using the policy network to select moves
+        while not game_over(state):
+            _, v = self.network.predict(state)
+            legal_moves = get_legal_moves(state)
+            action_values = []
+            for action in legal_moves:
+                new_state = make_move(state, action)
+                _, new_value = self.network.predict(new_state)
+                action_values.append(new_value)
+            action = legal_moves[np.argmax(action_values)]
+        return get_result(state)
+
+    def backpropogate(self, node, value):
+        # Backpropagate the value of the end state up the tree
+        node.visit_count += 1
+        node.total_value += value
+        if node.parent:
+            self.backpropagate(node.parent, -value)
+
+    def expand(self, node):
+        # Generate all legal moves from the current state and create child nodes for each move
+        pi, v = self.value_net.predict(node.state)
+        legal_moves = get_legal_moves(node.state)
+        for action in legal_moves:
+            state = apply_move(self.config, node.state, action)
+            child = Node(state)
+            child.parent = node
+            child.prior_prob = pi[0][action]
+            node.children.append(child)
+
+    def search(self):
+        # Run MCTS from the root node for a fixed number of iterations
+        for i in range(self.config.num_iterations):
+            node = self.root
+            while node.children:
+                node = self.select(node)
+            if node.visit_count > 0:
+                value = self.simulate(node.state)
+                self.backpropagate(node, value)
+            else:
+                self.expand(node)
+
+    def get_best_action(self):
+        # Select the best action based on the highest visit count of the child nodes
+        values = [(child.visit_count, action) for action, child in self.get_children(self.root)]
+        values.sort(reverse=True)
+        return values[0][1]
+
+    def get_children(self):
+        """
+        Return a list of all child nodes of the given node.
+        """
+        return [(child, action) for action, child in zip(get_legal_moves(self.state), self.children)]
+
+
+class Node:
+    def __init__(self, state):
+        self.state = state
+        self.visit_count = 0
+        self.total_value = 0
+        self.prior_prob = 0
+        self.children = []
+        self.parent = None
+
