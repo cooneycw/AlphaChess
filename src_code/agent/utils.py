@@ -7,7 +7,6 @@ from PIL import Image, ImageTk
 
 
 def draw_board(board, display=True):
-    print(f'draw board here')
     board_svg = chess.svg.board(board)
     board_png = cairosvg.svg2png(bytestring=board_svg)
     if display == False:
@@ -24,3 +23,14 @@ def draw_board(board, display=True):
         root.mainloop()
 
     return
+
+
+def create_all_moves_dict(board):
+    all_moves_dict = {}
+
+    for square in chess.SQUARES:
+        all_moves_dict[square] = []
+        for target_square in chess.SQUARES:
+            move = chess.Move(square, target_square)
+            all_moves_dict[square].append(move.uci())
+    return all_moves_dict

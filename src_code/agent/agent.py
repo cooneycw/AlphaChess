@@ -7,13 +7,14 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from keras.layers import Input, Conv2D, BatchNormalization, Activation, Add, Flatten, Dense
-from src_code.agent.utils import draw_board
+from src_code.agent.utils import draw_board, create_all_moves_dict
 
 
 class AlphaZeroChess:
     def __init__(self, config, redis_host='192.168.5.77', redis_port=6379):
         self.config = config
         self.board = chess.Board()
+        self.all_moves_dict = create_all_moves_dict(self.board)
         self.num_channels = 17
         self.num_moves = 4096
         self.redis_host = redis_host
@@ -152,6 +153,14 @@ def apply_move(config, board, action):
     return copy.deepcopy(board), board_to_input(config, board)
 
 
+def move_to_index(move):
+    # Convert the move string to a chess.Move object
+    move_obj = chess.Move.from_uci(move)
+    # Convert the move object to an integer index
+    index = move_obj.from_square * 64 + move_obj.to_square
+    return index
+
+
 def residual_block(x, filters):
     y = Conv2D(filters, kernel_size=3, padding='same')(x)
     y = BatchNormalization()(y)
@@ -190,7 +199,7 @@ def create_network(config):
     p = Flatten()(p)
     p = Dense(config.action_space_size, activation='softmax', name='policy')(p)
 
-    model = tf.keras.Model(inputs=inputs, outputs=[v, p])
+    model = tf.keras.Model(inputs=inputs, outputs=[p, v])
     return model
 
 
@@ -241,13 +250,20 @@ class MCTSTree:
         # Generate all legal moves from the current state and create child nodes for each move
         pi, v = self.network.predict(np.expand_dims(node.state, axis=0))
         legal_moves = get_legal_moves(node.board)
-        for action in legal_moves:
-            board, state = apply_move(self.config, node.board, action)
-            draw_board(board)
 
-            child = Node(state, board)
+        # Create list of legal policy probabilities corresponding to legal moves
+        legal_probabilities = [pi[0][self.config.all_chess_moves.index(move)] for move in legal_moves]
+
+        # Normalize the legal probabilities to sum to 1
+        legal_probabilities /= np.sum(legal_probabilities)
+
+        for i, action in enumerate(legal_moves):
+            new_board, state = apply_move(self.config, copy.deepcopy(node.board), action)
+            draw_board(new_board)
+
+            child = Node(state, new_board, name=action)
             child.parent = node
-            child.prior_prob = pi[0][action]
+            child.prior_prob = legal_probabilities[i]
             node.children.append(child)
 
     def search(self):
@@ -276,7 +292,7 @@ class MCTSTree:
 
 
 class Node:
-    def __init__(self, state, board):
+    def __init__(self, state, board, name='Game Start'):
         self.state = state
         self.board = copy.deepcopy(board)
         self.visit_count = 0
@@ -284,6 +300,7 @@ class Node:
         self.prior_prob = 0
         self.children = []
         self.parent = None
+        self.name = name
 
 
 def generate_training_data(agent, config, sim_counter):

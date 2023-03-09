@@ -1,11 +1,14 @@
+import chess
 import tensorflow as tf
 
 
 class Config:
+
     def __init__(self):
         # Board and network settings
         self.board_size = 8
         self.num_channels = 17
+        self.all_chess_moves = create_all_moves_list()
         # Training settings
         self.num_epochs = 10
         self.batch_size = 32
@@ -21,6 +24,15 @@ class Config:
         self.c_puct = 1.4
         self.alpha = 0.03
         self.optimizer = tf.keras.optimizers.Nadam(learning_rate=0.001)
+
+
+def create_all_moves_list():
+    all_moves_list = []
+    for square in chess.SQUARES:
+        for target_square in chess.SQUARES:
+            move = chess.Move(square, target_square)
+            all_moves_list.append(move.uci())
+    return all_moves_list
 
 
 class SimulationCounter:
