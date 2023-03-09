@@ -7,6 +7,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from keras.layers import Input, Conv2D, BatchNormalization, Activation, Add, Flatten, Dense
+from src_code.agent.utils import draw_board
 
 
 class AlphaZeroChess:
@@ -148,7 +149,7 @@ def apply_move(config, board, action):
     Apply the given action to the given board and return the resulting board state.
     """
     board.push_uci(action)
-    return board_to_input(config, board)
+    return copy.deepcopy(board), board_to_input(config, board)
 
 
 def residual_block(x, filters):
@@ -195,7 +196,7 @@ def create_network(config):
 
 class MCTSTree:
     def __init__(self, az):
-        self.root = Node(az.state)
+        self.root = Node(az.state, az.board)
         self.network = az.network
         self.config = az.config
 
@@ -238,11 +239,13 @@ class MCTSTree:
 
     def expand(self, node):
         # Generate all legal moves from the current state and create child nodes for each move
-        pi, v = self.network.predict(node.state)  # look at node.state shape??
-        legal_moves = get_legal_moves(node.state)
+        pi, v = self.network.predict(np.expand_dims(node.state, axis=0))
+        legal_moves = get_legal_moves(node.board)
         for action in legal_moves:
-            state = apply_move(self.config, node.state, action)
-            child = Node(state)
+            board, state = apply_move(self.config, node.board, action)
+            draw_board(board)
+
+            child = Node(state, board)
             child.parent = node
             child.prior_prob = pi[0][action]
             node.children.append(child)
@@ -273,8 +276,9 @@ class MCTSTree:
 
 
 class Node:
-    def __init__(self, state):
+    def __init__(self, state, board):
         self.state = state
+        self.board = copy.deepcopy(board)
         self.visit_count = 0
         self.total_value = 0
         self.prior_prob = 0
