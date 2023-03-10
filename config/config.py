@@ -2,9 +2,9 @@ import chess
 import tensorflow as tf
 
 
-class Config:
 
-    def __init__(self):
+class Config:
+    def __init__(self, verbosity):
         # Board and network settings
         self.board_size = 8
         self.num_channels = 17
@@ -24,6 +24,7 @@ class Config:
         self.c_puct = 1.4
         self.alpha = 0.03
         self.optimizer = tf.keras.optimizers.Nadam(learning_rate=0.001)
+        self.verbosity = verbosity
 
 
 def create_all_moves_list():

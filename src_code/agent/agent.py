@@ -7,14 +7,13 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from keras.layers import Input, Conv2D, BatchNormalization, Activation, Add, Flatten, Dense
-from src_code.agent.utils import draw_board, create_all_moves_dict
+from src_code.agent.utils import draw_board
 
 
 class AlphaZeroChess:
     def __init__(self, config, redis_host='192.168.5.77', redis_port=6379):
         self.config = config
         self.board = chess.Board()
-        self.all_moves_dict = create_all_moves_dict(self.board)
         self.num_channels = 17
         self.num_moves = 4096
         self.redis_host = redis_host
@@ -257,6 +256,9 @@ class MCTSTree:
         # Normalize the legal probabilities to sum to 1
         legal_probabilities /= np.sum(legal_probabilities)
 
+        diff = 1.0 - np.sum(legal_probabilities)
+        legal_probabilities[-1] += diff
+
         for i, action in enumerate(legal_moves):
             new_board, state = apply_move(self.config, copy.deepcopy(node.board), action)
             draw_board(new_board)
@@ -277,6 +279,14 @@ class MCTSTree:
                 self.backpropagate(node, value)
             else:
                 self.expand(node)
+
+        # Get the action probabilities and value of the root node
+        action_probs = np.zeros(self.config.action_space_size)
+        for child in self.root.children:
+            action_probs[self.config.all_chess_moves.index(child.name)] = child.visit_count / self.root.visit_count if self.root.visit_count > 0 else 0
+        value = self.root.total_value / self.root.visit_count if self.root.visit_count > 0 else 0
+
+        return action_probs, value
 
     def get_best_action(self):
         # Select the best action based on the highest visit count of the child nodes

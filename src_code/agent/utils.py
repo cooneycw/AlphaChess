@@ -3,10 +3,14 @@ import chess.svg
 import cairosvg
 import io
 import tkinter as tk
+import networkx as nx
+import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
 
 
-def draw_board(board, display=True):
+def draw_board(board, display=True, verbosity=False):
+    if not verbosity:
+        return
     board_svg = chess.svg.board(board)
     board_png = cairosvg.svg2png(bytestring=board_svg)
     if display == False:
@@ -25,12 +29,33 @@ def draw_board(board, display=True):
     return
 
 
-def create_all_moves_dict(board):
-    all_moves_dict = {}
+def visualize_tree(tree):
+    # Create a new graph
+    graph = nx.DiGraph()
 
-    for square in chess.SQUARES:
-        all_moves_dict[square] = []
-        for target_square in chess.SQUARES:
-            move = chess.Move(square, target_square)
-            all_moves_dict[square].append(move.uci())
-    return all_moves_dict
+    # Add nodes to the graph
+    add_node_to_graph(graph, tree.root)
+
+    # Add edges to the graph
+    add_edges_to_graph(graph, tree.root)
+
+    # Draw the graph
+    pos = nx.spring_layout(graph, seed=42)
+    nx.draw_networkx(graph, pos)
+
+    # Show the graph
+    plt.show()
+
+
+def add_node_to_graph(graph, node):
+    # Add the node to the graph
+    graph.add_node(node.name, label=node.name)
+
+
+def add_edges_to_graph(graph, node):
+    # Add edges from the node to its children
+    for child in node.children:
+        graph.add_edge(node.name, child.name)
+
+        # Recursively add edges for the child's children
+        add_edges_to_graph(graph, child)
