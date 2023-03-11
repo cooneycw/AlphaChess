@@ -16,6 +16,8 @@ class AlphaZeroChess:
         self.board = chess.Board()
         self.num_channels = 17
         self.num_moves = 4096
+        self.sim_counter = config.SimCounter()
+        self.move_counter = config.MoveCounter()
         self.redis_host = redis_host
         self.redis_port = redis_port
         self.redis = redis.StrictRedis(host=redis_host, port=redis_port, db=0)
@@ -39,7 +41,19 @@ class AlphaZeroChess:
         noise = np.random.dirichlet(alpha * np.ones(self.config.action_space_size))
         action_probs = (1 - self.config.eps) * action_probs + self.config.eps * noise
 
-        action = np.random.choice(len(action_probs), p=action_probs)
+        # Get the legal moves for the current board position
+        legal_moves = get_legal_moves(self.board)
+
+        # Filter out the illegal actions from the action probabilities
+        legal_action_probs = np.zeros(self.config.action_space_size)
+        for i in range(len(self.config.all_chess_moves)):
+            if self.config.all_chess_moves[i] in legal_moves:
+                legal_action_probs[i] = action_probs[i]
+            else:
+                legal_action_probs[i] = 0
+
+        # Choose the action with the highest probability among the legal moves
+        action = np.argmax(legal_action_probs)
         return action
 
     def update_tree(self, state, action):
@@ -221,22 +235,19 @@ class MCTSTree:
         index = uct_values.index(max(uct_values))
         return node.children[index]
 
-    def simulate(self, az, sim_counter):
+    def simulate(self, az):
         # Increment the simulation counter
-        sim_counter.increment()
+        az.sim_counter.increment()
         # Assign the initial board state to the state variable
         state = az.board
         # Simulate a game from the given state until the end using the policy network to select moves
         while not game_over(state):
             _, v = self.network.predict(state)
             legal_moves = get_legal_moves(state)
-            action_values = []
             for action in legal_moves:
                 new_state = make_move(state, action)
                 _, new_value = self.network.predict(new_state)
-                action_values.append(new_value)
-            action = legal_moves[np.argmax(action_values)]
-        return get_result(state)
+        return get_result(new_state)
 
     def backpropogate(self, node, value):
         # Backpropagate the value of the end state up the tree
@@ -300,6 +311,18 @@ class MCTSTree:
         """
         return [(child, action) for action, child in zip(get_legal_moves(self.state), self.children)]
 
+    def update_root(self, state, action):
+        # Find the child node corresponding to the given action
+        for child in self.root.children:
+            if child.name == action:
+                self.root = child
+                self.root.parent = None
+                break
+        else:
+            # If the child node does not exist, create a new node and set it as the root
+            new_board, new_state = apply_move(self.config, copy.deepcopy(self.root.board), action)
+            self.root = Node(new_state, new_board, name=action)
+
 
 class Node:
     def __init__(self, state, board, name='Game Start'):
@@ -313,7 +336,7 @@ class Node:
         self.name = name
 
 
-def generate_training_data(agent, config, sim_counter):
+def generate_training_data(agent, config):
     # Initialize the lists to store the training data
     states = []
     policy_targets = []
@@ -329,12 +352,13 @@ def generate_training_data(agent, config, sim_counter):
         while node.children:
             node = agent.tree.select(node)
             action = agent.tree.get_action(node)
-            agent.board.push_uci(action)
+            uci_move = config.all_chess_moves[action]
+            agent.board.push_uci(uci_move)
             sim_states.append(board_to_input(config, agent.board))
         agent.tree.expand(node)
 
         # Get the value of the end state
-        value = agent.tree.simulate(agent, sim_counter)
+        value = agent.tree.simulate(agent)
 
         # Backpropagate the value up the tree and collect the (state, policy, value) tuples
         for j in range(len(sim_states)):

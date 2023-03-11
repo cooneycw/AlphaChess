@@ -25,6 +25,8 @@ class Config:
         self.alpha = 0.03
         self.optimizer = tf.keras.optimizers.Nadam(learning_rate=0.001)
         self.verbosity = verbosity
+        self.SimCounter = SimulationCounter
+        self.MoveCounter = MoveCounter
 
 
 def create_all_moves_list():
@@ -46,6 +48,9 @@ class SimulationCounter:
     def get_count(self):
         return self.count
 
+    def reset(self):
+        self.count = 0
+
 
 class MoveCounter:
     def __init__(self):
@@ -56,3 +61,6 @@ class MoveCounter:
 
     def get_count(self):
         return self.count
+
+    def reset(self):
+        self.count = 0
