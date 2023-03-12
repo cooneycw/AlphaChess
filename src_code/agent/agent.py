@@ -4,10 +4,8 @@ import math
 import copy
 import random
 import numpy as np
-import tensorflow as tf
-from tensorflow import keras
-from keras.layers import Input, Conv2D, BatchNormalization, Activation, Add, Flatten, Dense
 from src_code.agent.utils import draw_board
+from src_code.agent.network import create_network
 
 
 class AlphaZeroChess:
@@ -229,48 +227,6 @@ def move_to_index(move):
     return index
 
 
-def residual_block(x, filters):
-    y = Conv2D(filters, kernel_size=3, padding='same')(x)
-    y = BatchNormalization()(y)
-    y = Activation('relu')(y)
-    y = Conv2D(filters, kernel_size=3, padding='same')(y)
-    y = BatchNormalization()(y)
-    y = Add()([x, y])
-    y = Activation('relu')(y)
-    return y
-
-
-# Define the neural network
-def create_network(config):
-    # Input layer
-    inputs = Input(shape=(config.board_size, config.board_size, config.num_channels))
-
-    # Residual blocks
-    x = Conv2D(256, kernel_size=3, padding='same')(inputs)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    for i in range(4):
-        x = residual_block(x, 256)
-
-    # Value head
-    v = Conv2D(1, kernel_size=1, padding='same')(x)
-    v = BatchNormalization()(v)
-    v = Activation('relu')(v)
-    v = Flatten()(v)
-    v = Dense(256, activation='relu')(v)
-    v = Dense(1, activation='tanh', name='value')(v)
-
-    # Policy head
-    p = Conv2D(2, kernel_size=1, padding='same')(x)
-    p = BatchNormalization()(p)
-    p = Activation('relu')(p)
-    p = Flatten()(p)
-    p = Dense(config.action_space_size, activation='softmax', name='policy')(p)
-
-    model = tf.keras.Model(inputs=inputs, outputs=[p, v])
-    return model
-
-
 class MCTSTree:
     def __init__(self, az):
         self.root = az.config.Node(az.state, az.board)
@@ -440,7 +396,7 @@ def generate_training_data(agent, config):
         # Backpropagate the value up the tree and collect the (state, policy, value) tuples
         for j in range(len(sim_states)):
             state = sim_states[j]
-            policy = agent.tree.children[j].prior_prob
+            policy = agent.tree.root.children[j].prior_prob
             states.append(state)
             policy_targets.append(policy)
             value_targets.append(value)
