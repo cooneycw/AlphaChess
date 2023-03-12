@@ -20,7 +20,9 @@ class Config:
         self.learning_rate = 0.01
         self.momentum = 0.9
         self.weight_decay = 1e-4
-        self.num_iterations = 1600
+        self.num_iterations = 50
+        self.cur_iterations = self.num_iterations
+        self.max_iterations = 1600
         self.action_space_size = 4096
         self.dirichlet_alpha = 0.03  # Starting value for alpha
         self.eps = 0.25  # Starting value for eps
@@ -32,8 +34,14 @@ class Config:
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter
         self.GameCounter = GameCounter
+        self.ChessDataset = ChessDataset
         self.Node = Node
 
+    def reset(self):
+        self.cur_iterations = self.num_iterations
+
+    def update_iters(self):
+        self.cur_iterations = interpolate(self.num_iterations, self.max_iterations, 1)
 
 class Node:
     def __init__(self, state, board, name='Game Start'):
@@ -96,3 +104,23 @@ class GameCounter:
 
     def reset(self):
         self.count = 0
+
+
+class ChessDataset:
+    def __init__(self, states, policy_targets, value_targets):
+        self.states = states
+        self.policy_targets = policy_targets
+        self.value_targets = value_targets
+
+    def __len__(self):
+        return len(self.states)
+
+    def __getitem__(self, index):
+        state = self.states[index]
+        policy_target = self.policy_targets[index]
+        value_target = self.value_targets[index]
+        return state, policy_target, value_target
+
+
+def interpolate(start, end, t):
+    return (1 - t) * start + t * end

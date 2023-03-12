@@ -59,3 +59,4 @@ def add_edges_to_graph(graph, node):
 
         # Recursively add edges for the child's children
         add_edges_to_graph(graph, child)
+

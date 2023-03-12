@@ -4,12 +4,14 @@ import math
 import copy
 import random
 import numpy as np
+import tensorflow as tf
+from tensorflow import keras
 from src_code.agent.utils import draw_board
 from src_code.agent.network import create_network
 
 
 class AlphaZeroChess:
-    def __init__(self, config):
+    def __init__(self, config, network=None):
         self.config = config
         self.board = chess.Board()
         self.num_channels = 17
@@ -22,14 +24,21 @@ class AlphaZeroChess:
         self.min_temperature = 0.1  # Minimum temperature
 
         # Create the value network
-
-        self.network = create_network(config)
+        if network is None:
+            self.network = create_network(config)
+        else:
+            self.network = network
         # Assign the optimizer to self.optimizer
         self.optimizer = config.optimizer
         self.state = board_to_input(config, self.board)
 
         # Initialize the MCTS tree
         self.tree = MCTSTree(self)
+
+    def reset(self):
+        self.board.reset()
+        self.tree = MCTSTree(self)
+        self.move_counter = self.config.MoveCounter()
 
     def update_temperature(self):
         self.temperature = max(self.temperature * self.temperature_drop, self.min_temperature)
@@ -69,7 +78,10 @@ class AlphaZeroChess:
         for child in root.children:
             action_probs[self.config.all_chess_moves.index(child.name)] = child.visit_count
             total_visits += child.visit_count
-        action_probs /= total_visits
+        if total_visits > 0:
+            action_probs /= total_visits
+        else:
+            action_probs[:] = 1.0 / self.config.action_space_size
         return action_probs
 
     def get_value(self, state):
@@ -77,13 +89,25 @@ class AlphaZeroChess:
         value = self.network.predict(np.expand_dims(state, axis=0))[1][0][0]
         return value
 
+    def get_result(self):
+        # Check if the game is over
+        if self.board.is_game_over():
+            # Check if the game ended in checkmate
+            if self.board.is_checkmate():
+                # Return 1 if white wins, 0 if black wins
+                return 1 if self.board.turn == chess.WHITE else -1
+            # Otherwise, the game ended in stalemate or other draw
+            return 0
+        # If the game is not over, return None
+        return None
+
     def update_tree(self, state, action):
         """Update the MCTS tree with the latest state and action."""
         self.tree.update_root(state, action)
 
     def update_network(self, states, policy_targets, value_targets):
         """Update the neural network with the latest training data."""
-        dataset = ChessDataset(states, policy_targets, value_targets)
+        dataset = self.config.ChessDataset(states, policy_targets, value_targets)
         dataloader = tf.data.Dataset.from_generator(lambda: dataset, (tf.float32, tf.float32, tf.float32)).batch(self.config.batch_size)
         for inputs, policy_targets, value_targets in dataloader:
             with tf.GradientTape() as tape:
@@ -132,22 +156,6 @@ class AlphaZeroChess:
         print(f"Network weights saved to Redis key '{key_name}'")
 
 
-class ChessDataset:
-    def __init__(self, states, policy_targets, value_targets):
-        self.states = states
-        self.policy_targets = policy_targets
-        self.value_targets = value_targets
-
-    def __len__(self):
-        return len(self.states)
-
-    def __getitem__(self, index):
-        state = self.states[index]
-        policy_target = self.policy_targets[index]
-        value_target = self.value_targets[index]
-        return state, policy_target, value_target
-
-
 def board_to_input(config, board):
     # Create an empty 8x8x17 tensor
     input_tensor = np.zeros((config.board_size, config.board_size, config.num_channels))
@@ -181,26 +189,14 @@ def board_to_input(config, board):
     return input_tensor
 
 
-def get_result(board):
-    # Check if the game is over
-    if board.is_game_over():
-        # Check if the game ended in checkmate
-        if board.is_checkmate():
-            # Return 1 if white wins, 0 if black wins
-            return 1 if board.turn == chess.WHITE else 0
-        # Otherwise, the game ended in stalemate or other draw
-        return 0.5
-    # If the game is not over, return None
-    return None
-
-
-def make_move(board, action):
+def make_move(board, uci_move, config):
     """
     Apply the given action to the given board and return the resulting board.
     """
     new_board = copy.deepcopy(board)
-    new_board.push_uci(action)
-    return new_board
+    new_board.push_uci(uci_move)
+    new_state = board_to_input(config, new_board)
+    return new_board, new_state
 
 
 def get_legal_moves(board):
@@ -209,14 +205,6 @@ def get_legal_moves(board):
     """
     legal_moves = list(board.legal_moves)
     return [move.uci() for move in legal_moves]
-
-
-def apply_move(config, board, action):
-    """
-    Apply the given action to the given board and return the resulting board state.
-    """
-    board.push_uci(action)
-    return copy.deepcopy(board), board_to_input(config, board)
 
 
 def move_to_index(move):
@@ -254,7 +242,7 @@ class MCTSTree:
         # Simulate a game from the given state until the end using the policy network to select moves
         while not az.game_over():
             try:
-                _, v = self.network.predict(np.expand_dims(state, axis=0))
+                _, v = self.network.predict(np.expand_dims(state, axis=0), verbose=0)
             except Exception as e:
                 print(f"Error occurred while predicting value: {e}")
                 return None
@@ -262,15 +250,15 @@ class MCTSTree:
             best_move = None
             best_value = -float('inf')
             for action in legal_moves:
-                new_state = make_move(az.board, action)
+                new_state = make_move(az.board, action, self.config)
                 new_state = board_to_input(self.config, new_state)
-                _, new_value = self.network.predict(np.expand_dims(new_state, axis=0))
+                _, new_value = self.network.predict(np.expand_dims(new_state, axis=0), verbose=0)
                 if new_value > best_value:
                     best_move = action
                     best_value = new_value
-            az.board = make_move(az.board, best_move)
+            az.board = make_move(az.board, best_move, self.config)
             v = best_value
-        return get_result(az.board)
+        return az.get_result(az.board)
 
     def backpropogate(self, node, value):
         # Backpropagate the value of the end state up the tree
@@ -281,7 +269,7 @@ class MCTSTree:
 
     def expand(self, node):
         # Generate all legal moves from the current state and create child nodes for each move
-        pi, v = self.network.predict(np.expand_dims(node.state, axis=0))
+        pi, v = self.network.predict(np.expand_dims(node.state, axis=0), verbose=0)
         legal_moves = get_legal_moves(node.board)
 
         # Create list of legal policy probabilities corresponding to legal moves
@@ -293,11 +281,11 @@ class MCTSTree:
         diff = 1.0 - np.sum(legal_probabilities)
         legal_probabilities[-1] += diff
 
-        for i, action in enumerate(legal_moves):
-            new_board, state = apply_move(self.config, copy.deepcopy(node.board), action)
+        for i, uci_move in enumerate(legal_moves):
+            new_board, state = make_move(copy.deepcopy(node.board), uci_move, self.config)
             draw_board(new_board)
 
-            child = self.config.Node(state, new_board, name=action)
+            child = self.config.Node(state, new_board, name=uci_move)
             child.parent = node
             child.prior_prob = legal_probabilities[i]
             node.children.append(child)
@@ -313,7 +301,7 @@ class MCTSTree:
                 self.backpropagate(node, value)
             else:
                 self.expand(node)
-            if (i % 100) == 0:
+            if (i % 100) == 0 and i > 0:
                 print(f'{i} tree searches complete.')
 
         # Get the action probabilities and value of the root node
@@ -324,86 +312,20 @@ class MCTSTree:
 
         return action_probs, value
 
-    def get_best_child(self, node, tau):
-        legal_moves = get_legal_moves(node.board)
-        legal_children = [child for child in node.children if child.name in legal_moves]
-        visit_counts = np.array([child.visit_count for child in legal_children], dtype=np.float32)
-        if not legal_children:
-            # If there are no legal children, return None
-            return None
-        else:
-            # Compute the visit count distribution with temperature scaling
-            if np.sum(visit_counts) > 0:
-                visit_dist = np.power(visit_counts, 1 / tau)
-                visit_probs = visit_dist / np.sum(visit_dist)
-            else:
-                # If all visit counts are zero, assign a small positive probability to all child nodes
-                visit_probs = np.ones(len(legal_children)) * 1e-6
-                visit_probs /= np.sum(visit_probs)
-            # Sample a child node from the visit count distribution
-            index = np.random.choice(len(legal_children), p=visit_probs)
-            return legal_children[index].name
-
     def get_children(self):
         """
         Return a list of all child nodes of the given node.
         """
         return [(child, action) for action, child in zip(get_legal_moves(self.state), self.children)]
 
-    def update_root(self, state, action):
+    def update_root(self, uci_move):
         # Find the child node corresponding to the given action
         for child in self.root.children:
-            if child.name == action:
+            if child.name == uci_move:
                 self.root = child
                 self.root.parent = None
                 break
         else:
             # If the child node does not exist, create a new node and set it as the root
-            uci_move = self.config.all_chess_moves[action]
-            new_board, new_state = apply_move(self.config, copy.deepcopy(self.root.board), action)
-            self.root = self.config.Node(new_state, new_board, name=action)
-
-
-def generate_training_data(agent, config):
-    # Initialize the lists to store the training data
-    states = []
-    policy_targets = []
-    value_targets = []
-
-    # Perform MCTS simulations to generate training data
-    for i in range(config.num_sims):
-        # Start a new simulation from the root node
-        node = agent.tree.root
-        sim_states = [board_to_input(config, agent.board)]
-
-        # Perform the selection, expansion, simulation, and backpropagation steps of MCTS
-        while node.children:
-            node = agent.tree.select(node)
-            uci_move = agent.tree.get_best_child(node, agent.temperature)
-            if uci_move is None:
-                break
-            if uci_move not in get_legal_moves(agent.board):
-                continue
-            agent.board.push_uci(uci_move)
-            sim_states.append(board_to_input(config, agent.board))
-        agent.tree.expand(node)
-        if (i % 100) == 0:
-            print(f'{i} simulations complete.')
-
-        # Get the value of the end state
-        value = agent.tree.simulate(agent)
-
-        # Backpropagate the value up the tree and collect the (state, policy, value) tuples
-        for j in range(len(sim_states)):
-            state = sim_states[j]
-            policy = agent.tree.root.children[j].prior_prob
-            states.append(state)
-            policy_targets.append(policy)
-            value_targets.append(value)
-
-        # Reset the board and MCTS tree to the initial state
-        agent.board.reset()
-        agent.tree = MCTSTree(agent)
-
-    return states, policy_targets, value_targets
-
+            new_board, new_state = make_move(copy.deepcopy(self.root.board), uci_move, self.config)
+            self.root = self.config.Node(new_state, new_board, name=uci_move)
