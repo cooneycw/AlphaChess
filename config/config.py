@@ -1,6 +1,6 @@
 import chess
+import copy
 import tensorflow as tf
-
 
 
 class Config:
@@ -9,6 +9,10 @@ class Config:
         self.board_size = 8
         self.num_channels = 17
         self.all_chess_moves = create_all_moves_list()
+        self.self_play_games = 25000
+        self.redis_host = '192.168.5.77'
+        self.redis_port = 6379
+        self.redis_db = 0
         # Training settings
         self.num_epochs = 10
         self.batch_size = 32
@@ -27,6 +31,20 @@ class Config:
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter
+        self.GameCounter = GameCounter
+        self.Node = Node
+
+
+class Node:
+    def __init__(self, state, board, name='Game Start'):
+        self.state = state
+        self.board = copy.deepcopy(board)
+        self.visit_count = 0
+        self.total_value = 0
+        self.prior_prob = 0
+        self.children = []
+        self.parent = None
+        self.name = name
 
 
 def create_all_moves_list():
@@ -58,6 +76,20 @@ class MoveCounter:
 
     def increment(self):
         self.count += 1
+
+    def get_count(self):
+        return self.count
+
+    def reset(self):
+        self.count = 0
+
+
+class GameCounter:
+    def __init__(self):
+        self.count = 0
+
+    def increment(self, n):
+        self.count += n
 
     def get_count(self):
         return self.count

@@ -1,4 +1,5 @@
 import tensorflow as tf
+import multiprocessing as mp
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess, board_to_input, generate_training_data
 from src_code.agent.utils import draw_board, visualize_tree
@@ -14,36 +15,42 @@ else:
 
 
 def main():
-    # Initialize the config and agent
     config = Config(verbosity=False)
-    agent = AlphaZeroChess(config, redis_host='localhost', redis_port=6379)
 
-    while True:
-        # Get the current state of the board
-        state = board_to_input(config, agent.board)
+    play_games(config)
 
-        # Get the best action to take
-        action = agent.get_action(state)
 
-        # Take the action and update the board state
-        uci_move = config.all_chess_moves[action]
-        agent.board.push_uci(uci_move)
-        agent.move_counter.increment()
-        if True:
-            print(f'moves completed: {agent.move_counter.get_count()}')
-            print(f'simulations completed: {agent.sim_counter.get_count()}')
-            draw_board(agent.board, verbosity=True)
-            visualize_tree(agent.tree)
+def play_games(config):
+    # Initialize the config and agent
 
-        # Update the MCTS tree with the latest state and action
-        agent.update_tree(state, action)
+    agent = AlphaZeroChess(config)
 
-        # Update the network weights every 100 simulations or every 10 moves
-        if agent.sim_counter.get_count() >= 100 or agent.move_counter.get_moves() >= 10:
+    # Play the game
+    for i in range(config.self_play_games):
+        while not agent.game_over():
+            # Get the current state of the board
+            state = board_to_input(config, agent.board)
+
+            # Get the best action to take
+            action = agent.get_action(state)
+
+            # Take the action and update the board state
+            uci_move = config.all_chess_moves[action]
+            agent.board.push_uci(uci_move)
+
+            # Print the board
+            print(f'Move was: {uci_move}')
+            draw_board(agent.board, display=True, verbosity=True)
+
+            # Generate training data
             states, policy_targets, value_targets = generate_training_data(agent, config)
+
+            # Train the network
             agent.update_network(states, policy_targets, value_targets)
-            agent.sim_counter.reset()
-            agent.move_counter.reset()
+            agent.update_temperature()
+
+    # Save the final weights
+    agent.save_network_weights(key_name='agent_network_weights')
 
 
 if __name__ == '__main__':

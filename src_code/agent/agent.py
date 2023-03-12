@@ -11,16 +11,17 @@ from src_code.agent.utils import draw_board
 
 
 class AlphaZeroChess:
-    def __init__(self, config, redis_host='192.168.5.77', redis_port=6379):
+    def __init__(self, config):
         self.config = config
         self.board = chess.Board()
         self.num_channels = 17
         self.num_moves = 4096
         self.sim_counter = config.SimCounter()
         self.move_counter = config.MoveCounter()
-        self.redis_host = redis_host
-        self.redis_port = redis_port
-        self.redis = redis.StrictRedis(host=redis_host, port=redis_port, db=0)
+        self.redis = redis.StrictRedis(host=config.redis_host, port=config.redis_port, db=config.redis_db)
+        self.temperature = 1  # Starting value for temperature
+        self.temperature_drop = 0.99  # How much to drop the temperature by each move
+        self.min_temperature = 0.1  # Minimum temperature
 
         # Create the value network
 
@@ -31,6 +32,12 @@ class AlphaZeroChess:
 
         # Initialize the MCTS tree
         self.tree = MCTSTree(self)
+
+    def update_temperature(self):
+        self.temperature = max(self.temperature * self.temperature_drop, self.min_temperature)
+
+    def game_over(self):
+        return self.board.is_game_over()
 
     def get_action(self, state):
         """Get the best action to take given the current state of the board."""
@@ -56,6 +63,22 @@ class AlphaZeroChess:
         action = np.argmax(legal_action_probs)
         return action
 
+    def get_policy(self, state):
+        # Run the MCTS simulation and return the visit counts as the policy
+        root = self.tree.root
+        action_probs = np.zeros(self.config.action_space_size, dtype=np.float32)
+        total_visits = 0
+        for child in root.children:
+            action_probs[self.config.all_chess_moves.index(child.name)] = child.visit_count
+            total_visits += child.visit_count
+        action_probs /= total_visits
+        return action_probs
+
+    def get_value(self, state):
+        # Use the network to predict the value of the given state
+        value = self.network.predict(np.expand_dims(state, axis=0))[1][0][0]
+        return value
+
     def update_tree(self, state, action):
         """Update the MCTS tree with the latest state and action."""
         self.tree.update_root(state, action)
@@ -73,6 +96,42 @@ class AlphaZeroChess:
             gradients = tape.gradient(loss, self.network.trainable_variables)
             self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
         self.network.eval()
+
+    def load_network_weights(self, key_name):
+        # Connect to Redis and retrieve the serialized weights
+        serialized_weights = self.redis.get(key_name)
+
+        if serialized_weights is None:
+            # Initialize the weights if no weights are found in Redis
+            self.network = create_network(self.config)
+
+            print(f"No weights found in Redis key '{key_name}'; network weights initialized")
+        else:
+            # Deserialize the weights from the byte string using NumPy
+            weights_dict = np.loads(serialized_weights, allow_pickle=True)
+
+            # Set the weights for each layer of the network
+            for layer in self.network.layers:
+                layer_name = layer.name
+                layer_weights = weights_dict[layer_name]
+                layer.set_weights([np.array(layer_weights[0]), np.array(layer_weights[1])])
+
+            print(f"Network weights loaded from Redis key '{key_name}'")
+
+    def save_network_weights(self, key_name):
+        # Convert the weights to a dictionary
+        weights_dict = {}
+        for layer in self.network.layers:
+            weights_dict[layer.name] = [layer.get_weights()[0].tolist(), layer.get_weights()[1].tolist()]
+
+        # Serialize the dictionary to a byte string using NumPy
+        serialized_weights = np.dumps(weights_dict)
+
+        # Connect to Redis and save the weights using the specified key name
+
+        self.redis.set(key_name, serialized_weights)
+
+        print(f"Network weights saved to Redis key '{key_name}'")
 
 
 class ChessDataset:
@@ -124,10 +183,6 @@ def board_to_input(config, board):
     return input_tensor
 
 
-def game_over(board):
-    return board.is_game_over()
-
-
 def get_result(board):
     # Check if the game is over
     if board.is_game_over():
@@ -146,7 +201,7 @@ def make_move(board, action):
     Apply the given action to the given board and return the resulting board.
     """
     new_board = copy.deepcopy(board)
-    new_board.push(action)
+    new_board.push_uci(action)
     return new_board
 
 
@@ -218,7 +273,7 @@ def create_network(config):
 
 class MCTSTree:
     def __init__(self, az):
-        self.root = Node(az.state, az.board)
+        self.root = az.config.Node(az.state, az.board)
         self.network = az.network
         self.config = az.config
 
@@ -239,15 +294,27 @@ class MCTSTree:
         # Increment the simulation counter
         az.sim_counter.increment()
         # Assign the initial board state to the state variable
-        state = az.board
+        state = board_to_input(self.config, az.board)
         # Simulate a game from the given state until the end using the policy network to select moves
-        while not game_over(state):
-            _, v = self.network.predict(state)
-            legal_moves = get_legal_moves(state)
+        while not az.game_over():
+            try:
+                _, v = self.network.predict(np.expand_dims(state, axis=0))
+            except Exception as e:
+                print(f"Error occurred while predicting value: {e}")
+                return None
+            legal_moves = get_legal_moves(az.board)
+            best_move = None
+            best_value = -float('inf')
             for action in legal_moves:
-                new_state = make_move(state, action)
-                _, new_value = self.network.predict(new_state)
-        return get_result(new_state)
+                new_state = make_move(az.board, action)
+                new_state = board_to_input(self.config, new_state)
+                _, new_value = self.network.predict(np.expand_dims(new_state, axis=0))
+                if new_value > best_value:
+                    best_move = action
+                    best_value = new_value
+            az.board = make_move(az.board, best_move)
+            v = best_value
+        return get_result(az.board)
 
     def backpropogate(self, node, value):
         # Backpropagate the value of the end state up the tree
@@ -274,7 +341,7 @@ class MCTSTree:
             new_board, state = apply_move(self.config, copy.deepcopy(node.board), action)
             draw_board(new_board)
 
-            child = Node(state, new_board, name=action)
+            child = self.config.Node(state, new_board, name=action)
             child.parent = node
             child.prior_prob = legal_probabilities[i]
             node.children.append(child)
@@ -290,6 +357,8 @@ class MCTSTree:
                 self.backpropagate(node, value)
             else:
                 self.expand(node)
+            if (i % 100) == 0:
+                print(f'{i} tree searches complete.')
 
         # Get the action probabilities and value of the root node
         action_probs = np.zeros(self.config.action_space_size)
@@ -299,11 +368,25 @@ class MCTSTree:
 
         return action_probs, value
 
-    def get_best_action(self):
-        # Select the best action based on the highest visit count of the child nodes
-        values = [(child.visit_count, action) for action, child in self.get_children(self.root)]
-        values.sort(reverse=True)
-        return values[0][1]
+    def get_best_child(self, node, tau):
+        legal_moves = get_legal_moves(node.board)
+        legal_children = [child for child in node.children if child.name in legal_moves]
+        visit_counts = np.array([child.visit_count for child in legal_children], dtype=np.float32)
+        if not legal_children:
+            # If there are no legal children, return None
+            return None
+        else:
+            # Compute the visit count distribution with temperature scaling
+            if np.sum(visit_counts) > 0:
+                visit_dist = np.power(visit_counts, 1 / tau)
+                visit_probs = visit_dist / np.sum(visit_dist)
+            else:
+                # If all visit counts are zero, assign a small positive probability to all child nodes
+                visit_probs = np.ones(len(legal_children)) * 1e-6
+                visit_probs /= np.sum(visit_probs)
+            # Sample a child node from the visit count distribution
+            index = np.random.choice(len(legal_children), p=visit_probs)
+            return legal_children[index].name
 
     def get_children(self):
         """
@@ -320,20 +403,9 @@ class MCTSTree:
                 break
         else:
             # If the child node does not exist, create a new node and set it as the root
+            uci_move = self.config.all_chess_moves[action]
             new_board, new_state = apply_move(self.config, copy.deepcopy(self.root.board), action)
-            self.root = Node(new_state, new_board, name=action)
-
-
-class Node:
-    def __init__(self, state, board, name='Game Start'):
-        self.state = state
-        self.board = copy.deepcopy(board)
-        self.visit_count = 0
-        self.total_value = 0
-        self.prior_prob = 0
-        self.children = []
-        self.parent = None
-        self.name = name
+            self.root = self.config.Node(new_state, new_board, name=action)
 
 
 def generate_training_data(agent, config):
@@ -343,7 +415,7 @@ def generate_training_data(agent, config):
     value_targets = []
 
     # Perform MCTS simulations to generate training data
-    for i in range(config.num_simulations):
+    for i in range(config.num_sims):
         # Start a new simulation from the root node
         node = agent.tree.root
         sim_states = [board_to_input(config, agent.board)]
@@ -351,11 +423,16 @@ def generate_training_data(agent, config):
         # Perform the selection, expansion, simulation, and backpropagation steps of MCTS
         while node.children:
             node = agent.tree.select(node)
-            action = agent.tree.get_action(node)
-            uci_move = config.all_chess_moves[action]
+            uci_move = agent.tree.get_best_child(node, agent.temperature)
+            if uci_move is None:
+                break
+            if uci_move not in get_legal_moves(agent.board):
+                continue
             agent.board.push_uci(uci_move)
             sim_states.append(board_to_input(config, agent.board))
         agent.tree.expand(node)
+        if (i % 100) == 0:
+            print(f'{i} simulations complete.')
 
         # Get the value of the end state
         value = agent.tree.simulate(agent)
@@ -373,3 +450,4 @@ def generate_training_data(agent, config):
         agent.tree = MCTSTree(agent)
 
     return states, policy_targets, value_targets
+
