@@ -34,30 +34,31 @@ def play_games(config):
     # Play the game
     for i in range(config.self_play_games):
         # training loop:
+        agent.move_counter.reset()
         while agent.sim_counter.count <= config.num_sims:
-            move_cnt = 0
             while not agent.game_over():
                 # Get the current state of the board
-                state = board_to_input(config, agent.board)
 
-                # Get the best action to take
-                action = agent.get_action(state)
+                action, policy_target = agent.get_action()
 
                 # Take the action and update the board state
                 uci_move = config.all_chess_moves[action]
                 agent.board.push_uci(uci_move)
 
                 # Print the board
-                print(f'The {agent.move_counter.count} move was: {uci_move}')
-                if (agent.move_counter.count % 100) == 0 and (agent.move_counter.count > 0):
+                print(f'The {agent.sim_counter.count} move was: {uci_move}')
+                if (agent.sim_counter.count % 100) == 0 and (agent.sim_counter.count > 0):
                     draw_board(agent.board, display=True, verbosity=True)
-                policy_target = agent.get_policy(state)
+                policy_target = agent.tree
                 value_target = agent.get_result()
 
                 # Append the training data
+                state = board_to_input(config, agent.board)
                 states.append(state)
                 policy_targets.append(policy_target)
                 value_targets.append(value_target)
+
+                # Update the tree
                 agent.tree.update_root(uci_move)
                 agent.move_counter.increment()
 
@@ -70,8 +71,6 @@ def play_games(config):
 
         # Train the network
         agent.update_network(states, policy_targets, value_targets)
-        agent.update_temperature()
-        config.update_iters()
 
     # Save the final weights
     agent.save_network_weights(key_name='agent_network_weights')

@@ -1,5 +1,4 @@
 import chess
-import copy
 import tensorflow as tf
 
 
@@ -17,12 +16,13 @@ class Config:
         self.num_epochs = 10
         self.batch_size = 32
         self.maximum_moves = 100
+        self.temperature = 1
+        self.temperature_drop = 0.99
+        self.min_temperature = 0.1
         self.learning_rate = 0.01
         self.momentum = 0.9
         self.weight_decay = 1e-4
-        self.num_iterations = 50
-        self.cur_iterations = self.num_iterations
-        self.max_iterations = 1600
+        self.num_iterations = 1600
         self.action_space_size = 4096
         self.dirichlet_alpha = 0.03  # Starting value for alpha
         self.eps = 0.25  # Starting value for eps
@@ -35,24 +35,6 @@ class Config:
         self.MoveCounter = MoveCounter
         self.GameCounter = GameCounter
         self.ChessDataset = ChessDataset
-        self.Node = Node
-
-    def reset(self):
-        self.cur_iterations = self.num_iterations
-
-    def update_iters(self):
-        self.cur_iterations = interpolate(self.num_iterations, self.max_iterations, 1)
-
-class Node:
-    def __init__(self, state, board, name='Game Start'):
-        self.state = state
-        self.board = copy.deepcopy(board)
-        self.visit_count = 0
-        self.total_value = 0
-        self.prior_prob = 0
-        self.children = []
-        self.parent = None
-        self.name = name
 
 
 def create_all_moves_list():
