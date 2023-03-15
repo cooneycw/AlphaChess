@@ -32,21 +32,21 @@ def play_games(config):
     policy_targets = []
     value_targets = []
     # Play the game
+    agent.game_counter.reset()
     for i in range(config.self_play_games):
         # training loop:
         agent.move_counter.reset()
-        while agent.sim_counter.count <= config.num_sims:
+        while agent.game_counter.count <= config.self_play_games:
             while not agent.game_over():
                 # Get the current state of the board
 
-                action, policy_target = agent.get_action()
+                uci_move, policy_target = agent.get_action()
 
                 # Take the action and update the board state
-                uci_move = config.all_chess_moves[action]
                 agent.board.push_uci(uci_move)
 
                 # Print the board
-                print(f'The {agent.sim_counter.count} move was: {uci_move}')
+                print(f'The {agent.move_counter.count} move was: {uci_move}')
                 if (agent.sim_counter.count % 100) == 0 and (agent.sim_counter.count > 0):
                     draw_board(agent.board, display=True, verbosity=True)
                 policy_target = agent.tree
@@ -67,10 +67,11 @@ def play_games(config):
                     print(f'Game Over! Winner is {agent.board.result()}')
                     agent.reset()
 
-            agent.sim_counter.increment()
+            agent.move_counter.reset()
+            agent.game_counter.increment()
 
-        # Train the network
-        agent.update_network(states, policy_targets, value_targets)
+            # Train the network
+            agent.update_network(states, policy_targets, value_targets)
 
     # Save the final weights
     agent.save_network_weights(key_name='agent_network_weights')

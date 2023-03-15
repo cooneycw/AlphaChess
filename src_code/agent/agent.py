@@ -21,6 +21,7 @@ class AlphaZeroChess:
         self.min_temperature = config.min_temperature
         self.sim_counter = config.SimCounter()
         self.move_counter = config.MoveCounter()
+        self.game_counter = config.GameCounter()
         self.redis = redis.StrictRedis(host=config.redis_host, port=config.redis_port, db=config.redis_db)
         # Create the value network
         if network is None:
@@ -49,24 +50,17 @@ class AlphaZeroChess:
             policy, value = self.tree.process_mcts(self.tree.root, self.config)
             self.sim_counter.increment()
             if self.sim_counter.get_count() % 100 == 0:
-                print(f'Number of simulations: {self.sim_counter.get_count()}')
+                print(f'Game Number: {self.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
 
         # retrieve the updated policy
-        policy = self.tree.get_policy()
-
-        # Add temperature to the action probabilities
-        pi = policy / np.sum(policy)
-
-        policy = np.power(policy, 1 / self.temperature)
-        policy /= np.sum(np.power(policy, 1 / self.temperature))
-        self.update_temperature()
+        policy, temp_adj_policy = self.tree.get_policy(self)
 
         # Get legal moves
         legal_moves = get_legal_moves(self.tree.root.board)
+        action = np.random.choice(len(temp_adj_policy), p=temp_adj_policy)
 
-        # Create a new policy array containing only the probabilities for the legal moves
-        action = np.random.choice(len(policy), p=policy)
-        return legal_moves[action], pi
+        self.sim_counter.reset()
+        return legal_moves[action], policy
 
     def game_over(self):
         return self.board.is_game_over()
@@ -203,12 +197,19 @@ class MCTSTree:
         self.network = az.network
         self.config = az.config
 
-    def get_policy(self):
+    def get_policy(self, agent):
         # Get the policy from the root node
         policy = [child.Nvisit for child in self.root.children]
+
         # Normalize the policy
         policy = np.array(policy) / sum(policy)
-        return policy
+
+        # Adjust the policy according to the temperature
+        temp_adj_policy = np.power(policy, 1 / agent.temperature)
+        temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature))
+        agent.update_temperature()
+
+        return policy, temp_adj_policy
 
     def process_mcts(self, node, config):
         mode = None
@@ -218,21 +219,18 @@ class MCTSTree:
             winner = node.board.result()
             node.game_over = True
             if winner == '1-0':
-                if node.board.turn is True:
-                    draw_board(node.board, True, True)
-                    value = 1
+                value = 1
             elif winner == '0-1':
-                if node.board.turn is False:
-                    draw_board(node.board, True, True)
-                    value = -1
+                value = -1
             elif winner == '1/2-1/2':
                 if node.board.turn is True:
-                    value = 0.5
-                else:
                     value = -0.5
-            else:
-                raise ValueError('Invalid game result')
-            return policy, -value
+                else:
+                    value = 0.5
+            try:
+                return policy, -value
+            except:
+                cwc = 0
         # Select a node to expand
         if len(node.children) == 0:
             policy, value = self.expand(node)
@@ -272,7 +270,10 @@ class MCTSTree:
         legal_moves = get_legal_moves(leaf_node.board)
 
         # Create list of legal policy probabilities corresponding to legal moves
-        legal_probabilities = [pi[self.config.all_chess_moves.index(move)] for move in legal_moves]
+        try:
+            legal_probabilities = [pi[self.config.all_chess_moves.index(move)] for move in legal_moves]
+        except:
+            cwc = 0
 
         # Normalize the legal probabilities to sum to 1
         legal_probabilities /= np.sum(legal_probabilities)
