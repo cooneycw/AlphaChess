@@ -28,9 +28,12 @@ def play_games(config):
     agent = AlphaZeroChess(config)
 
     # Initialize the training data
-    states = []
-    policy_targets = []
-    value_targets = []
+    states_white = []
+    states_black = []
+    policy_targets_white = []
+    policy_targets_black = []
+    value_targets_white = []
+    value_targets_black = []
     # Play the game
     agent.game_counter.reset()
     for i in range(config.self_play_games):
@@ -39,7 +42,7 @@ def play_games(config):
         while agent.game_counter.count <= config.self_play_games:
             while not agent.game_over():
                 # Get the current state of the board
-
+                player = 'white' if agent.board.turn else 'black'
                 uci_move, policy_target = agent.get_action()
 
                 # Take the action and update the board state
@@ -49,14 +52,16 @@ def play_games(config):
                 print(f'The {agent.move_counter.count} move was: {uci_move}')
                 if (agent.sim_counter.count % 100) == 0 and (agent.sim_counter.count > 0):
                     draw_board(agent.board, display=True, verbosity=True)
-                policy_target = agent.tree
-                value_target = agent.get_result()
-
-                # Append the training data
-                state = board_to_input(config, agent.board)
-                states.append(state)
-                policy_targets.append(policy_target)
-                value_targets.append(value_target)
+                if player == 'white':
+                    # Append the training data
+                    state = board_to_input(config, agent.board)
+                    states_white.append(state)
+                    policy_targets_white.append(policy_target)
+                else:
+                    # Append the training data
+                    state = board_to_input(config, agent.board)
+                    states_black.append(state)
+                    policy_targets_black.append(policy_target)
 
                 # Update the tree
                 agent.tree.update_root(uci_move)
@@ -65,13 +70,15 @@ def play_games(config):
                 # Print the result of the game
                 if agent.game_over():
                     print(f'Game Over! Winner is {agent.board.result()}')
-                    agent.reset()
-
-            agent.move_counter.reset()
-            agent.game_counter.increment()
+                    # add the value outcomes to the training data
+                    if agent.board.result() == '1-0':
+                        cwc = 0
+                        value_targets_white.append(1)
+                        value_targets_black.append(-1)
 
             # Train the network
-            agent.update_network(states, policy_targets, value_targets)
+            agent.update_network_white(states_white, policy_targets_white, value_targets_white)
+            agent.update_network_black(states_black, policy_targets_black, value_targets_black)
 
     # Save the final weights
     agent.save_network_weights(key_name='agent_network_weights')

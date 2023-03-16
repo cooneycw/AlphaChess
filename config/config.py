@@ -22,8 +22,9 @@ class Config:
         self.learning_rate = 0.01
         self.momentum = 0.9
         self.weight_decay = 1e-4
-        self.num_iterations = 1600
-        self.action_space_size = 4096
+        self.num_iterations = 160
+        self.reward_discount = 0.99
+        self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.03  # Starting value for alpha
         self.eps = 0.25  # Starting value for eps
         self.num_sims = 800
@@ -39,10 +40,22 @@ class Config:
 
 def create_all_moves_list():
     all_moves_list = []
+
     for square in chess.SQUARES:
         for target_square in chess.SQUARES:
             move = chess.Move(square, target_square)
             all_moves_list.append(move.uci())
+
+    for promotion in [2, 3, 4, 5]:
+        for square in chess.SQUARES:
+            for target_square in chess.SQUARES:
+                promotion_move = chess.Move(square, target_square, promotion=promotion)
+                test_val = str(promotion_move)
+                if len(test_val) > 4:
+                    if (test_val[1] == '7' and test_val[3] == '8') or (test_val[1] == '2' and test_val[3] == '1'): # Promotion
+                        if abs(ord(test_val[0]) - ord(test_val[2])) < 2:
+                            all_moves_list.append(promotion_move.uci())
+
     return all_moves_list
 
 
