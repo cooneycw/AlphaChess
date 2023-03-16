@@ -56,6 +56,8 @@ class AlphaZeroChess:
             self.sim_counter.increment()
             if self.sim_counter.get_count() % 100 == 0:
                 print(f'Game Number: {self.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
+                self.tree.depth()
+                self.tree.width()
 
         # retrieve the updated policy
         if self.tree.root.player_to_move == 'white':
@@ -386,6 +388,32 @@ class MCTSTree:
                 self.root.name = 'root'
                 break
 
+    def depth(self):
+        print("Calculating depth...")
+        depth = self._depth(self.root)
+        print("Depth:", depth)
+        return depth
+
+    def _depth(self, node):
+        if not node.children:
+            return 0
+        else:
+            return 1 + max(self._depth(child) for child in node.children)
+
+    def width(self):
+        print("Calculating width...")
+        node_counts = []
+        self._width(self.root, node_counts, 0)
+        print("Width:", node_counts)
+        return node_counts
+
+    def _width(self, node, node_counts, depth):
+        if depth == len(node_counts):
+            node_counts.append(1)
+        else:
+            node_counts[depth] += 1
+        for child in node.children:
+            self._width(child, node_counts, depth + 1)
 
 class Node:
     def __init__(self, state, board, player_to_move='white', name='root'):

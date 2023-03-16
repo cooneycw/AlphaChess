@@ -50,7 +50,9 @@ def play_games(config):
 
                 # Print the board
                 print(f'The {agent.move_counter.count} move was: {uci_move}')
-                if (agent.sim_counter.count % 100) == 0 and (agent.sim_counter.count > 0):
+                if (agent.move_counter.count % 10) == 0 and (agent.move_counter.count > 0):
+                    agent.tree.depth()
+                    agent.tree.width()
                     draw_board(agent.board, display=True, verbosity=True)
                 if player == 'white':
                     # Append the training data
