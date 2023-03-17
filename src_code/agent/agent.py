@@ -262,30 +262,32 @@ class MCTSTree:
 
     def get_policy_white(self, agent):
         # Get the policy from the root node
+        epsilon = 1e-8
         policy = [child.Nvisit_white for child in self.root.children]
-        if math.isnan(policy[0]):
+        if any(math.isnan(pol) for pol in policy):
             policy = np.array([1 * self.root.children[i].board.is_game_over() for i in range(len(self.root.children))])
         # Normalize the policy
-        policy = np.array(policy) / sum(policy)
+        policy = np.array(policy) / (sum(policy) + epsilon)
 
         # Adjust the policy according to the temperature
         temp_adj_policy = np.power(policy, 1 / agent.temperature)
-        temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature))
+        temp_adj_policy /= (np.sum(np.power(policy, 1 / agent.temperature)) + epsilon)
         agent.update_temperature()
 
         return policy, temp_adj_policy
 
     def get_policy_black(self, agent):
         # Get the policy from the root node
+        epsilon = 1e-8
         policy = [child.Nvisit_black for child in self.root.children]
-        if math.isnan(policy[0]):
+        if any(math.isnan(pol) for pol in policy):
             policy = np.array([1 * self.root.children[i].board.is_game_over() for i in range(len(self.root.children))])
         # Normalize the policy
-        policy = np.array(policy) / sum(policy)
+        policy = np.array(policy) / (sum(policy) + epsilon)
 
         # Adjust the policy according to the temperature
         temp_adj_policy = np.power(policy, 1 / agent.temperature)
-        temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature))
+        temp_adj_policy /= (np.sum(np.power(policy, 1 / agent.temperature)) + epsilon)
         agent.update_temperature()
 
         return policy, temp_adj_policy
