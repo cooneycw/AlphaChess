@@ -56,7 +56,6 @@ class AlphaZeroChess:
             self.sim_counter.increment()
             if self.sim_counter.get_count() % 100 == 0:
                 print(f'Game Number: {self.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
-                self.tree.depth()
                 self.tree.width()
 
         # retrieve the updated policy
@@ -264,7 +263,8 @@ class MCTSTree:
     def get_policy_white(self, agent):
         # Get the policy from the root node
         policy = [child.Nvisit_white for child in self.root.children]
-
+        if math.isnan(policy[0]):
+            policy = np.array([1 * self.root.children[i].board.is_game_over() for i in range(len(self.root.children))])
         # Normalize the policy
         policy = np.array(policy) / sum(policy)
 
@@ -278,7 +278,8 @@ class MCTSTree:
     def get_policy_black(self, agent):
         # Get the policy from the root node
         policy = [child.Nvisit_black for child in self.root.children]
-
+        if math.isnan(policy[0]):
+            policy = np.array([1 * self.root.children[i].board.is_game_over() for i in range(len(self.root.children))])
         # Normalize the policy
         policy = np.array(policy) / sum(policy)
 

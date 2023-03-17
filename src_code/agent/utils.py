@@ -60,3 +60,20 @@ def add_edges_to_graph(graph, node):
         # Recursively add edges for the child's children
         add_edges_to_graph(graph, child)
 
+
+def get_board_piece_count(board):
+    num_white_pieces = len(board.pieces(chess.PAWN, chess.WHITE)) + \
+                   len(board.pieces(chess.KNIGHT, chess.WHITE)) + \
+                   len(board.pieces(chess.BISHOP, chess.WHITE)) + \
+                   len(board.pieces(chess.ROOK, chess.WHITE)) + \
+                   len(board.pieces(chess.QUEEN, chess.WHITE)) + \
+                   len(board.pieces(chess.KING, chess.WHITE))
+
+    # Count the number of black pieces
+    num_black_pieces = len(board.pieces(chess.PAWN, chess.BLACK)) + \
+                   len(board.pieces(chess.KNIGHT, chess.BLACK)) + \
+                   len(board.pieces(chess.BISHOP, chess.BLACK)) + \
+                   len(board.pieces(chess.ROOK, chess.BLACK)) + \
+                   len(board.pieces(chess.QUEEN, chess.BLACK)) + \
+                   len(board.pieces(chess.KING, chess.BLACK))
+    return num_white_pieces, num_black_pieces

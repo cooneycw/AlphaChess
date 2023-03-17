@@ -8,7 +8,7 @@ class Config:
         self.board_size = 8
         self.num_channels = 17
         self.all_chess_moves = create_all_moves_list()
-        self.self_play_games = 25000
+        self.self_play_games = 2000
         self.redis_host = '192.168.5.77'
         self.redis_port = 6379
         self.redis_db = 0
@@ -22,7 +22,7 @@ class Config:
         self.learning_rate = 0.01
         self.momentum = 0.9
         self.weight_decay = 1e-4
-        self.num_iterations = 160
+        self.num_iterations = 40
         self.reward_discount = 0.99
         self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.03  # Starting value for alpha
