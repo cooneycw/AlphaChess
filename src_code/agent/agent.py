@@ -66,7 +66,9 @@ class AlphaZeroChess:
 
         # Get legal moves
         legal_moves = get_legal_moves(self.tree.root.board)
-
+        if not np.isclose(sum(temp_adj_policy), 1, rtol=1e-8, atol=1e-8):
+            # Adjust the last probability value to ensure they sum to 1
+            temp_adj_policy[-1] = 1 - sum(temp_adj_policy[:-1])
         try:
             action = np.random.choice(len(temp_adj_policy), p=temp_adj_policy)
         except:
@@ -271,7 +273,7 @@ class MCTSTree:
 
         # Adjust the policy according to the temperature
         temp_adj_policy = np.power(policy, 1 / agent.temperature)
-        temp_adj_policy /= (np.sum(np.power(policy, 1 / agent.temperature)) + epsilon)
+        temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature)) + epsilon
         agent.update_temperature()
 
         return policy, temp_adj_policy
@@ -287,7 +289,7 @@ class MCTSTree:
 
         # Adjust the policy according to the temperature
         temp_adj_policy = np.power(policy, 1 / agent.temperature)
-        temp_adj_policy /= (np.sum(np.power(policy, 1 / agent.temperature)) + epsilon)
+        temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature))
         agent.update_temperature()
 
         return policy, temp_adj_policy
