@@ -23,12 +23,13 @@ else:
     print('No GPUs available')
 
 
-def play_games():
+def play_games(game_id):
     # Initialize the config and agent
     config = Config(verbosity=False)
     agent = AlphaZeroChess(config)
 
     # Initialize the training data
+    key_id_list = []
     states_white = []
     states_black = []
     policy_targets_white = []
@@ -38,17 +39,21 @@ def play_games():
     # Play the game
     agent.game_counter.reset()
     for i in range(config.self_play_games):
+        policy_targets_temp_white = []
+        policy_targets_temp_black = []
         # training loop:
         agent.move_counter.reset()
         while agent.game_counter.count <= config.self_play_games:
             while not agent.game_over():
                 # Get the current state of the board
                 player = 'white' if agent.board.turn else 'black'
-                uci_move, policy_target = agent.get_action()
+                uci_move, policy, policy_target = agent.get_action()
 
                 # Take the action and update the board state
                 agent.board.push_uci(uci_move)
 
+                key_id = f'{game_id}_{agent.move_counter.count}'
+                key_id_list.append(key_id)
                 # Print the board
                 print(f'The {agent.move_counter.count} move was: {uci_move}')
                 if (agent.move_counter.count % 10) == 0 and (agent.move_counter.count > 0):
@@ -60,12 +65,12 @@ def play_games():
                     # Append the training data
                     state = board_to_input(config, agent.board)
                     states_white.append(state)
-                    policy_targets_white.append(policy_target)
+                    policy_targets_temp_white.append(policy_target)
                 else:
                     # Append the training data
                     state = board_to_input(config, agent.board)
                     states_black.append(state)
-                    policy_targets_black.append(policy_target)
+                    policy_targets_temp_black.append(policy_target)
 
                 # Update the tree
                 agent.tree.update_root(uci_move)
@@ -75,10 +80,25 @@ def play_games():
                 if agent.game_over():
                     print(f'Game Over! Winner is {agent.board.result()}')
                     # add the value outcomes to the training data
+                    value_target_white = None
+                    value_target_black = None
+
                     if agent.board.result() == '1-0':
-                        cwc = 0
-                        value_targets_white.append(1)
-                        value_targets_black.append(-1)
+                        if agent.tree.root.player_to_move == 'black':
+                            value_target_white = 1
+                            value_target_black = -1
+                    elif agent.board.result() == '0-1':
+                        if agent.tree.root.player_to_move == 'white':
+                            value_target_white = -1
+                            value_target_black = 1
+                    elif agent.board.result() == '1/2-1/2':
+                            value_target_white = 0.25
+                            value_target_black = 0.25
+
+                    value_targets_white = [value_target_white * config.reward_discount ** (len(policy_targets_temp_white) - i) for i in range(len(policy_targets_temp_white) + 1)]
+                    value_targets_black = [value_target_black * config.reward_discount ** (len(policy_targets_temp_black) - i) for i in range(len(policy_targets_temp_black) + 1)]
+                    policy_targets_white.append(policy_targets_temp_white)
+                    policy_targets_black.append(policy_targets_temp_black)
 
             # Train the network
             agent.update_network_white(states_white, policy_targets_white, value_targets_white)

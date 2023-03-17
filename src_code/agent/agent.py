@@ -66,13 +66,16 @@ class AlphaZeroChess:
 
         # Get legal moves
         legal_moves = get_legal_moves(self.tree.root.board)
-        if not np.isclose(sum(temp_adj_policy), 1, rtol=1e-8, atol=1e-8):
-            # Adjust the last probability value to ensure they sum to 1
-            temp_adj_policy[-1] = 1 - sum(temp_adj_policy[:-1])
-        try:
-            action = np.random.choice(len(temp_adj_policy), p=temp_adj_policy)
-        except:
-            cwc = 0
+
+        comparator = np.random.rand()
+        cumulative_prob = 0
+        for i in range(len(temp_adj_policy)): # len(temp_adj_policy)
+            cumulative_prob += temp_adj_policy[i]
+            if cumulative_prob > comparator:
+                action = i
+                break
+            action = len(temp_adj_policy) - 1
+
         self.sim_counter.reset()
         return legal_moves[action], policy
 
@@ -276,7 +279,9 @@ class MCTSTree:
         temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature)) + epsilon
         agent.update_temperature()
 
-        return policy, temp_adj_policy
+        policy_array = policy_to_prob_array(policy, [child.root.name for child in self.root.children], self.config.all_chess_moves)
+
+        return policy, temp_adj_policy, policy_array
 
     def get_policy_black(self, agent):
         # Get the policy from the root node
@@ -292,7 +297,9 @@ class MCTSTree:
         temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature))
         agent.update_temperature()
 
-        return policy, temp_adj_policy
+        policy_array = policy_to_prob_array(policy, [child.root.name for child in self.root.children], self.config.all_chess_moves)
+
+        return policy, temp_adj_policy, policy_array
 
     def process_mcts(self, node, config):
         policy = []
@@ -419,6 +426,18 @@ class MCTSTree:
             node_counts[depth] += 1
         for child in node.children:
             self._width(child, node_counts, depth + 1)
+
+
+def policy_to_prob_array(policy, legal_moves, all_moves_list):
+    prob_array = np.zeros(len(all_moves_list))
+
+    for i, move in enumerate(all_moves_list):
+        if move in legal_moves:
+            index = legal_moves.index(move)
+            prob_array[i] = policy[index]
+
+    return prob_array
+
 
 class Node:
     def __init__(self, state, board, player_to_move='white', name='root'):
