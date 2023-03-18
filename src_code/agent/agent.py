@@ -101,29 +101,57 @@ class AlphaZeroChess:
         """Update the neural network with the latest training data."""
         dataset = self.config.ChessDataset(states, policy_targets, value_targets)
         dataloader = tf.data.Dataset.from_generator(lambda: dataset, (tf.float32, tf.float32, tf.float32)).batch(self.config.batch_size)
-        for inputs, policy_targets, value_targets in dataloader:
-            with tf.GradientTape() as tape:
-                value_preds, policy_preds = self.network(inputs)
-                value_loss = keras.losses.mean_squared_error(value_targets, value_preds)
-                policy_loss = keras.losses.categorical_crossentropy(policy_targets, policy_preds)
-                loss = value_loss + policy_loss
-            gradients = tape.gradient(loss, self.network.trainable_variables)
-            self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
-        self.network_white.eval()
+
+        for epoch in range(self.config.num_epochs):
+            avg_loss = 0
+            avg_accuracy = 0
+            num_batches = 0
+            for inputs, policy_targets, value_targets in dataloader:
+                with tf.GradientTape() as tape:
+                    value_preds, policy_preds = self.network(inputs)
+                    value_loss = keras.losses.mean_squared_error(value_targets, value_preds)
+                    policy_loss = keras.losses.categorical_crossentropy(policy_targets, policy_preds)
+                    loss = value_loss + policy_loss
+                gradients = tape.gradient(loss, self.network.trainable_variables)
+                self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
+
+                avg_loss += loss.numpy().mean()
+                policy_accuracy = tf.reduce_mean(
+                    tf.cast(tf.equal(tf.argmax(policy_targets, axis=1), tf.argmax(policy_preds, axis=1)), tf.float32))
+                avg_accuracy += policy_accuracy.numpy()
+                num_batches += 1
+
+            avg_loss /= num_batches
+            avg_accuracy /= num_batches
+            print(f'White network update: Avg loss: {avg_loss:.4f}, Avg accuracy: {avg_accuracy:.4f}')
 
     def update_network_black(self, states, policy_targets, value_targets):
         """Update the neural network with the latest training data."""
         dataset = self.config.ChessDataset(states, policy_targets, value_targets)
         dataloader = tf.data.Dataset.from_generator(lambda: dataset, (tf.float32, tf.float32, tf.float32)).batch(self.config.batch_size)
-        for inputs, policy_targets, value_targets in dataloader:
-            with tf.GradientTape() as tape:
-                value_preds, policy_preds = self.network(inputs)
-                value_loss = keras.losses.mean_squared_error(value_targets, value_preds)
-                policy_loss = keras.losses.categorical_crossentropy(policy_targets, policy_preds)
-                loss = value_loss + policy_loss
-            gradients = tape.gradient(loss, self.network.trainable_variables)
-            self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
-        self.network_black.eval()
+
+        for epoch in range(self.config.num_epochs):
+            avg_loss = 0
+            avg_accuracy = 0
+            num_batches = 0
+            for inputs, policy_targets, value_targets in dataloader:
+                with tf.GradientTape() as tape:
+                    value_preds, policy_preds = self.network(inputs)
+                    value_loss = keras.losses.mean_squared_error(value_targets, value_preds)
+                    policy_loss = keras.losses.categorical_crossentropy(policy_targets, policy_preds)
+                    loss = value_loss + policy_loss
+                gradients = tape.gradient(loss, self.network.trainable_variables)
+                self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
+
+                avg_loss += loss.numpy().mean()
+                policy_accuracy = tf.reduce_mean(
+                    tf.cast(tf.equal(tf.argmax(policy_targets, axis=1), tf.argmax(policy_preds, axis=1)), tf.float32))
+                avg_accuracy += policy_accuracy.numpy()
+                num_batches += 1
+
+            avg_loss /= num_batches
+            avg_accuracy /= num_batches
+            print(f'Black network update: Avg loss: {avg_loss:.4f}, Avg accuracy: {avg_accuracy:.4f}')
 
     def load_network_weights_white(self, key_name):
         # Connect to Redis and retrieve the serialized weights

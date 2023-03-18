@@ -2,6 +2,7 @@ import logging
 import ray
 import copy
 import chess
+import datetime
 import numpy as np
 import tensorflow as tf
 import multiprocessing as mp
@@ -104,8 +105,9 @@ def play_games(game_id):
             agent.update_network_white(states_white, policy_targets_white, value_targets_white)
             agent.update_network_black(states_black, policy_targets_black, value_targets_black)
 
-    # Save the final weights
-    agent.save_network_weights(key_name='agent_network_weights')
+            # Save the final weights
+            agent.save_network_weights_white(key_name=f'network_weights_{game_id}_{datetime.datetime.now()}_white')
+            agent.save_network_weights_black(key_name=f'network_weights_{game_id}_{datetime.datetime.now()}_black')
 
 
 #@ray.remote
@@ -119,18 +121,18 @@ if __name__ == '__main__':
     config = Config(verbosity=False)
     main()
 
-    start_ind = 0
-    while start_ind < config.self_play_games:
-        inds = list(range(start_ind, min(start_ind + NUM_WORKERS, config.self_play_games)))
-
-        results = [main.remote() for _ in range(len(inds))]
-
-        # Wait for all tasks to complete and get the results
-        output = ray.get(results)
-
-        # Print the output of each task
-        for i, result in enumerate(output):
-            print(f'Task {i} output: {result}')
-
-        start_ind += NUM_WORKERS
+    # start_ind = 0
+    # while start_ind < config.self_play_games:
+    #     inds = list(range(start_ind, min(start_ind + NUM_WORKERS, config.self_play_games)))
+    #
+    #     results = [main.remote() for _ in range(len(inds))]
+    #
+    #     # Wait for all tasks to complete and get the results
+    #     output = ray.get(results)
+    #
+    #     # Print the output of each task
+    #     for i, result in enumerate(output):
+    #         print(f'Task {i} output: {result}')
+    #
+    #     start_ind += NUM_WORKERS
 
