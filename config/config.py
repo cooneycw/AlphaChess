@@ -22,7 +22,7 @@ class Config:
         self.learning_rate = 0.01
         self.momentum = 0.9
         self.weight_decay = 1e-4
-        self.num_iterations = 40
+        self.num_iterations = 1200
         self.reward_discount = 0.99
         self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.03  # Starting value for alpha

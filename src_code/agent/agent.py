@@ -60,9 +60,9 @@ class AlphaZeroChess:
 
         # retrieve the updated policy
         if self.tree.root.player_to_move == 'white':
-            policy, temp_adj_policy = self.tree.get_policy_white(self)
+            policy, temp_adj_policy, policy_array = self.tree.get_policy_white(self)
         else:
-            policy, temp_adj_policy = self.tree.get_policy_black(self)
+            policy, temp_adj_policy, policy_array = self.tree.get_policy_black(self)
 
         # Get legal moves
         legal_moves = get_legal_moves(self.tree.root.board)
@@ -77,7 +77,7 @@ class AlphaZeroChess:
             action = len(temp_adj_policy) - 1
 
         self.sim_counter.reset()
-        return legal_moves[action], policy
+        return legal_moves[action], policy, policy_array
 
     def game_over(self):
         return self.board.is_game_over()
@@ -279,7 +279,7 @@ class MCTSTree:
         temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature)) + epsilon
         agent.update_temperature()
 
-        policy_array = policy_to_prob_array(policy, [child.root.name for child in self.root.children], self.config.all_chess_moves)
+        policy_array = policy_to_prob_array(policy, [child.name for child in self.root.children], self.config.all_chess_moves)
 
         return policy, temp_adj_policy, policy_array
 
@@ -297,7 +297,7 @@ class MCTSTree:
         temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature))
         agent.update_temperature()
 
-        policy_array = policy_to_prob_array(policy, [child.root.name for child in self.root.children], self.config.all_chess_moves)
+        policy_array = policy_to_prob_array(policy, [child.name for child in self.root.children], self.config.all_chess_moves)
 
         return policy, temp_adj_policy, policy_array
 

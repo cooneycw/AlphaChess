@@ -2,6 +2,7 @@ import chess
 import chess.svg
 import cairosvg
 import io
+import datetime
 import tkinter as tk
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -59,6 +60,12 @@ def add_edges_to_graph(graph, node):
 
         # Recursively add edges for the child's children
         add_edges_to_graph(graph, child)
+
+
+def generate_game_id():
+    now = datetime.datetime.now()
+    game_id = now.strftime('%Y%m%d%H%M%S')
+    return game_id
 
 
 def get_board_piece_count(board):

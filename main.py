@@ -7,7 +7,7 @@ import tensorflow as tf
 import multiprocessing as mp
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess, board_to_input
-from src_code.agent.utils import draw_board, visualize_tree, get_board_piece_count
+from src_code.agent.utils import draw_board, visualize_tree, get_board_piece_count, generate_game_id
 
 NUM_WORKERS = mp.cpu_count() - 2
 
@@ -110,7 +110,8 @@ def play_games(game_id):
 
 #@ray.remote
 def main():
-    play_games()
+    game_id = generate_game_id()
+    play_games(game_id)
     return f'Finished!'
 
 
