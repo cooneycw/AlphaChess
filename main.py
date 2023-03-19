@@ -10,7 +10,7 @@ from config.config import Config, interpolate
 from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
 from src_code.agent.utils import draw_board, visualize_tree, get_board_piece_count, generate_game_id, save_training_data, load_training_data, scan_redis_for_training_data
 
-USE_RAY = True
+USE_RAY = False
 if USE_RAY:
     NUM_WORKERS = mp.cpu_count() - 2
     ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.DEBUG)
@@ -58,6 +58,7 @@ def play_games(pass_dict):
             if (agent.move_counter.count % 5) == 0 and (agent.move_counter.count > 0):
                 agent.tree.width()
                 print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
+                print(agent.board)
                 # if (agent.move_counter.count % 50) == 0:
                 #    draw_board(agent.board, display=True, verbosity=True)
             if player == 'white':
@@ -127,6 +128,10 @@ def train_model(key_prefix):
 
 
 @ray.remote
+def main_ray(in_params):
+    return main(in_params)
+
+
 def main(in_params):
     print(f'in_params: {in_params}')
     type = in_params['type']
@@ -189,7 +194,7 @@ if __name__ == '__main__':
                 params_item['num_iterations'] = int(0.5 + interpolate(min_iterations, max_num_iterations, (min(ind, 5000)/5000)))
                 params_list.append(params_item)
 
-            results = [main.remote(params_list[j]) for j in range(len(inds))]
+            results = [main_ray.remote(params_list[j]) for j in range(len(inds))]
 
             # Wait for all tasks to complete and get the results
             output = ray.get(results)
