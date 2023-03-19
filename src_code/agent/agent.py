@@ -27,10 +27,12 @@ class AlphaZeroChess:
         # Create the value networks
         if network_white is None:
             self.network_white = create_network(config)
+            self.load_network_weights_white('network_current_white')
         else:
             self.network_white = network_white
         if network_black is None:
             self.network_black = create_network(config)
+            self.load_network_weights_black('network_current_black')
         else:
             self.network_black = network_black
 
@@ -163,18 +165,19 @@ class AlphaZeroChess:
 
         if serialized_weights is None:
             # Initialize the weights if no weights are found in Redis
-            self.network_white = create_network(self.config)
+            raise Exception(f'No white weights found in Redis: {key_name}')
 
-            print(f"No white weights found in Redis key '{key_name}'; network weights initialized")
         else:
             # Deserialize the weights from the byte string using NumPy
-            weights_dict = np.loads(serialized_weights, allow_pickle=True)
+            weights_dict = pickle.loads(serialized_weights)
 
             # Set the weights for each layer of the network
             for layer in self.network_white.layers:
                 layer_name = layer.name
+                if layer_name in ['input_1', 'activation', 'activation_1']:
+                    continue
                 layer_weights = weights_dict[layer_name]
-                layer.set_weights([np.array(layer_weights[0]), np.array(layer_weights[1])])
+                layer.set_weights([np.array(w) for w in layer_weights])
 
             print(f"Network_white weights loaded from Redis key '{key_name}'")
 
@@ -184,33 +187,41 @@ class AlphaZeroChess:
 
         if serialized_weights is None:
             # Initialize the weights if no weights are found in Redis
-            self.network_black = create_network(self.config)
-
-            print(f"No black weights found in Redis key '{key_name}'; network weights initialized")
+            raise Exception(f'No white weights found in Redis: {key_name}')
         else:
             # Deserialize the weights from the byte string using NumPy
-            weights_dict = np.loads(serialized_weights, allow_pickle=True)
+            weights_dict = pickle.loads(serialized_weights)
 
             # Set the weights for each layer of the network
             for layer in self.network_black.layers:
                 layer_name = layer.name
+                if layer_name in ['input_1', 'activation', 'activation_1']:
+                    continue
                 layer_weights = weights_dict[layer_name]
-                layer.set_weights([np.array(layer_weights[0]), np.array(layer_weights[1])])
+                layer.set_weights([np.array(w) for w in layer_weights])
 
             print(f"Network_black weights loaded from Redis key '{key_name}'")
+
+    def save_networks(self, key_name):
+        self.save_network_weights_white(key_name+'_white')
+        self.save_network_weights_black(key_name+'_black')
+
+    def load_networks(self, key_name):
+        self.load_network_weights_white(key_name+'_white')
+        self.load_network_weights_black(key_name+'_black')
 
     def save_network_weights_white(self, key_name):
         # Convert the weights to a dictionary
         weights_dict = {}
         for layer in self.network_white.layers:
-            weights_dict[layer.name] = [layer.get_weights()[0].tolist(), layer.get_weights()[1].tolist()]
+            if len(layer.get_weights()) > 0:  # Check if the layer has any weights
+                weights_dict[layer.name] = [w.tolist() for w in layer.get_weights()]
 
         # Serialize the dictionary to a byte string using NumPy
-        serialized_weights = np.dumps(weights_dict)
+        pickle_dict = pickle.dumps(weights_dict)
 
         # Connect to Redis and save the weights using the specified key name
-
-        self.redis.set(key_name, serialized_weights)
+        self.redis.set(key_name, pickle_dict)
 
         print(f"Network white weights saved to Redis key '{key_name}'")
 
@@ -218,14 +229,14 @@ class AlphaZeroChess:
         # Convert the weights to a dictionary
         weights_dict = {}
         for layer in self.network_black.layers:
-            weights_dict[layer.name] = [layer.get_weights()[0].tolist(), layer.get_weights()[1].tolist()]
+            if len(layer.get_weights()) > 0:  # Check if the layer has any weights
+                weights_dict[layer.name] = [w.tolist() for w in layer.get_weights()]
 
         # Serialize the dictionary to a byte string using NumPy
-        serialized_weights = np.dumps(weights_dict)
+        pickle_dict = pickle.dumps(weights_dict)
 
         # Connect to Redis and save the weights using the specified key name
-
-        self.redis.set(key_name, serialized_weights)
+        self.redis.set(key_name, pickle_dict)
 
         print(f"Network black weights saved to Redis key '{key_name}'")
 

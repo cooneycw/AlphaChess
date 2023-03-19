@@ -92,3 +92,17 @@ def save_training_data(agent, key_name, save_dict):
     pickled_dict = pickle.dumps(save_dict)
     agent.redis.set(key_name, save_dict)
     print(f"Training data saved to Redis key '{key_name}'  Value target white:{save_dict['value_target_white']}  Value target black:{save_dict['value_target_black']}")
+
+
+def load_training_data(agent, key_name):
+    # Connect to Redis and load the training data using the specified key name
+    pickled_dict = agent.redis.get(key_name)
+    save_dict = pickle.loads(pickled_dict)
+    print(f"Training data loaded from Redis key '{key_name}'  Value target white:{save_dict['value_target_white']}  Value target black:{save_dict['value_target_black']}")
+    return save_dict
+
+
+def scan_redis_for_training_data(agent, match):
+    # Connect to Redis and scan for keys that start with 'training_data'
+    keys = agent.redis.scan_iter(match=match)
+    return keys

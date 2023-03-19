@@ -7,8 +7,8 @@ import numpy as np
 import tensorflow as tf
 import multiprocessing as mp
 from config.config import Config
-from src_code.agent.agent import AlphaZeroChess, board_to_input
-from src_code.agent.utils import draw_board, visualize_tree, get_board_piece_count, generate_game_id, save_training_data
+from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
+from src_code.agent.utils import draw_board, visualize_tree, get_board_piece_count, generate_game_id, save_training_data, load_training_data, scan_redis_for_training_data
 
 NUM_WORKERS = mp.cpu_count() - 2
 
@@ -24,7 +24,9 @@ else:
     print('No GPUs available')
 
 
-def play_games(game_id):
+def play_games(pass_dict):
+    game_id = pass_dict['game_id']
+    key_prefix = pass_dict['key_prefix']
     # Initialize the config and agent
     config = Config(verbosity=False)
 
@@ -47,7 +49,7 @@ def play_games(game_id):
             # Take the action and update the board state
             agent.board.push_uci(uci_move)
 
-            key_id = f'azChess_trainingData_test_{game_id}_{agent.move_counter.count}'
+            key_id = f'{key_prefix}_{game_id}_{agent.move_counter.count}'
             key_id_list.append(key_id)
             # Print the board
             print(f'The {agent.move_counter.count} move was: {uci_move}')
@@ -111,28 +113,44 @@ def play_games(game_id):
                     # Save the training data
                     save_training_data(agent, key_id, key_dict)
 
-            break
+                    break
 
 
-def train_model():
-    pass
+def train_model(key_prefix):
+    config = Config(verbosity=False)
+    agent = AlphaZeroChess(config)
+
+    key_list = scan_redis_for_training_data(agent, key_prefix)
+    cwc = 0
 
 
 #@ray.remote
 def main(type):
+    key_prefix = 'azChess_trainingData_test'
+
     if type == 'create_training_data':
         game_id = generate_game_id()
-        play_games(game_id)
+        pass_dict = dict()
+        pass_dict['game_id'] = game_id
+        pass_dict['key_prefix'] = key_prefix
+        play_games(pass_dict)
         return game_id
+
     elif type == 'train':
-        train_model()
+        train_model(key_prefix)
 
 
 if __name__ == '__main__':
     outer_config = Config(verbosity=False)
-    type_list = ['create_training_data', 'train']
-    type_id = 0
-    main(type=type_list[type_id])
+    type_list = ['initialize', 'create_training_data', 'train']
+    type_id = 1
+    if type_list[type_id] == 'initialize':
+        network_white = create_network(outer_config)
+        network_black = create_network(outer_config)
+        outer_agent = AlphaZeroChess(outer_config, network_white=network_white, network_black=network_black)
+        outer_agent.save_networks('network_current')
+    else:
+        main(type=type_list[type_id])
 
     # start_ind = 0
     # while start_ind < outer_config.self_play_games:

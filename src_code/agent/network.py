@@ -42,4 +42,7 @@ def create_network(config):
     p = Dense(config.action_space_size, activation='softmax', name='policy')(p)
 
     model = tf.keras.Model(inputs=inputs, outputs=[p, v])
+
+    # Initialize the weights of the model
+    model.build(input_shape=(None, config.board_size, config.board_size, config.num_channels))
     return model
