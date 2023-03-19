@@ -2,6 +2,7 @@ import chess
 import chess.svg
 import cairosvg
 import io
+import pickle
 import datetime
 import tkinter as tk
 import networkx as nx
@@ -84,3 +85,10 @@ def get_board_piece_count(board):
                    len(board.pieces(chess.QUEEN, chess.BLACK)) + \
                    len(board.pieces(chess.KING, chess.BLACK))
     return num_white_pieces, num_black_pieces
+
+
+def save_training_data(agent, key_name, save_dict):
+    # Connect to Redis and save the training data using the specified key name
+    pickled_dict = pickle.dumps(save_dict)
+    agent.redis.set(key_name, save_dict)
+    print(f"Training data saved to Redis key '{key_name}'  Value target white:{save_dict['value_target_white']}  Value target black:{save_dict['value_target_black']}")

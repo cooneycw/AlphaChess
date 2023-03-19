@@ -3,6 +3,7 @@ import redis
 import math
 import copy
 import random
+import pickle
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -55,7 +56,8 @@ class AlphaZeroChess:
             _ = self.tree.process_mcts(self.tree.root, self.config)
             self.sim_counter.increment()
             if self.sim_counter.get_count() % 100 == 0:
-                print(f'Game Number: {self.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
+                print(
+                    f'Game Number: {self.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
                 self.tree.width()
 
         # retrieve the updated policy
@@ -69,7 +71,7 @@ class AlphaZeroChess:
 
         comparator = np.random.rand()
         cumulative_prob = 0
-        for i in range(len(temp_adj_policy)): # len(temp_adj_policy)
+        for i in range(len(temp_adj_policy)):  # len(temp_adj_policy)
             cumulative_prob += temp_adj_policy[i]
             if cumulative_prob > comparator:
                 action = i
@@ -100,7 +102,8 @@ class AlphaZeroChess:
     def update_network_white(self, states, policy_targets, value_targets):
         """Update the neural network with the latest training data."""
         dataset = self.config.ChessDataset(states, policy_targets, value_targets)
-        dataloader = tf.data.Dataset.from_generator(lambda: dataset, (tf.float32, tf.float32, tf.float32)).batch(self.config.batch_size)
+        dataloader = tf.data.Dataset.from_generator(lambda: dataset, (tf.float32, tf.float32, tf.float32)).batch(
+            self.config.batch_size)
 
         for epoch in range(self.config.num_epochs):
             avg_loss = 0
@@ -128,7 +131,8 @@ class AlphaZeroChess:
     def update_network_black(self, states, policy_targets, value_targets):
         """Update the neural network with the latest training data."""
         dataset = self.config.ChessDataset(states, policy_targets, value_targets)
-        dataloader = tf.data.Dataset.from_generator(lambda: dataset, (tf.float32, tf.float32, tf.float32)).batch(self.config.batch_size)
+        dataloader = tf.data.Dataset.from_generator(lambda: dataset, (tf.float32, tf.float32, tf.float32)).batch(
+            self.config.batch_size)
 
         for epoch in range(self.config.num_epochs):
             avg_loss = 0
@@ -210,7 +214,7 @@ class AlphaZeroChess:
 
         print(f"Network white weights saved to Redis key '{key_name}'")
 
-    def save_network_weights_black(self, key_name):
+    def save_network_weights_black(self, key_name, ):
         # Convert the weights to a dictionary
         weights_dict = {}
         for layer in self.network_black.layers:
@@ -307,7 +311,8 @@ class MCTSTree:
         temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature)) + epsilon
         agent.update_temperature()
 
-        policy_array = policy_to_prob_array(policy, [child.name for child in self.root.children], self.config.all_chess_moves)
+        policy_array = policy_to_prob_array(policy, [child.name for child in self.root.children],
+                                            self.config.all_chess_moves)
 
         return policy, temp_adj_policy, policy_array
 
@@ -325,7 +330,8 @@ class MCTSTree:
         temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature))
         agent.update_temperature()
 
-        policy_array = policy_to_prob_array(policy, [child.name for child in self.root.children], self.config.all_chess_moves)
+        policy_array = policy_to_prob_array(policy, [child.name for child in self.root.children],
+                                            self.config.all_chess_moves)
 
         return policy, temp_adj_policy, policy_array
 
@@ -356,10 +362,12 @@ class MCTSTree:
 
         for child in node.children:
             if node.player_to_move == 'white':
-                uct = child.Qreward_white + self.config.c_puct * child.prior_prob_white * math.sqrt(node.Nvisit_white) / (1 + child.Nvisit_white)
+                uct = child.Qreward_white + self.config.c_puct * child.prior_prob_white * math.sqrt(
+                    node.Nvisit_white) / (1 + child.Nvisit_white)
                 policy.append(child.prior_prob_white)
             else:
-                uct = child.Qreward_black + self.config.c_puct * child.prior_prob_black * math.sqrt(node.Nvisit_black) / (1 + child.Nvisit_black)
+                uct = child.Qreward_black + self.config.c_puct * child.prior_prob_black * math.sqrt(
+                    node.Nvisit_black) / (1 + child.Nvisit_black)
                 policy.append(child.prior_prob_black)
             if uct > max_uct:
                 max_uct = uct
