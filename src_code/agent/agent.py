@@ -174,7 +174,10 @@ class AlphaZeroChess:
             # Set the weights for each layer of the network
             for layer in self.network_white.layers:
                 layer_name = layer.name
-                if layer_name in ['input_1', 'activation', 'activation_1']:
+                if (layer_name[0:5] == 'input' or
+                        layer_name[0:3] == 'add' or
+                        layer_name[0:7] == 'flatten' or
+                        layer_name[0:10] == 'activation'):
                     continue
                 layer_weights = weights_dict[layer_name]
                 layer.set_weights([np.array(w) for w in layer_weights])
@@ -187,7 +190,7 @@ class AlphaZeroChess:
 
         if serialized_weights is None:
             # Initialize the weights if no weights are found in Redis
-            raise Exception(f'No white weights found in Redis: {key_name}')
+            raise Exception(f'No black weights found in Redis: {key_name}')
         else:
             # Deserialize the weights from the byte string using NumPy
             weights_dict = pickle.loads(serialized_weights)
@@ -195,7 +198,10 @@ class AlphaZeroChess:
             # Set the weights for each layer of the network
             for layer in self.network_black.layers:
                 layer_name = layer.name
-                if layer_name in ['input_1', 'activation', 'activation_1']:
+                if (layer_name[0:5] == 'input' or
+                    layer_name[0:3] == 'add' or
+                    layer_name[0:7] == 'flatten' or
+                    layer_name[0:10] == 'activation'):
                     continue
                 layer_weights = weights_dict[layer_name]
                 layer.set_weights([np.array(w) for w in layer_weights])

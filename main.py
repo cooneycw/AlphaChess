@@ -10,9 +10,7 @@ from config.config import Config
 from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
 from src_code.agent.utils import draw_board, visualize_tree, get_board_piece_count, generate_game_id, save_training_data, load_training_data, scan_redis_for_training_data
 
-NUM_WORKERS = mp.cpu_count() - 2
 
-# ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.DEBUG)
 
 logging.getLogger('tensorflow').setLevel(logging.WARNING)
 physical_devices = tf.config.list_physical_devices('GPU')
@@ -126,6 +124,7 @@ def train_model(key_prefix):
 
 #@ray.remote
 def main(type):
+    print(f'Running the main function with type: {type}')
     key_prefix = 'azChess_trainingData_test'
 
     if type == 'create_training_data':
@@ -134,36 +133,45 @@ def main(type):
         pass_dict['game_id'] = game_id
         pass_dict['key_prefix'] = key_prefix
         play_games(pass_dict)
-        return game_id
 
     elif type == 'train':
         train_model(key_prefix)
 
+    return f'Finished running the main function with type: {type} Game ID: {game_id}'
+
 
 if __name__ == '__main__':
-    outer_config = Config(verbosity=False)
     type_list = ['initialize', 'create_training_data', 'train']
     type_id = 1
-    if type_list[type_id] == 'initialize':
-        network_white = create_network(outer_config)
-        network_black = create_network(outer_config)
-        outer_agent = AlphaZeroChess(outer_config, network_white=network_white, network_black=network_black)
-        outer_agent.save_networks('network_current')
-    else:
-        main(type=type_list[type_id])
+    use_ray = False
+    outer_config = Config(verbosity=False)
+    if not use_ray:
+        if type_list[type_id] == 'initialize':
+            print(f'Initializing the networks')
+            network_white = create_network(outer_config)
+            network_black = create_network(outer_config)
+            outer_agent = AlphaZeroChess(outer_config, network_white=network_white, network_black=network_black)
+            outer_agent.save_networks('network_current')
+        else:
+            outcome = main(type=type_list[type_id])
+            print(f'Outcome: {outcome}')
+    elif use_ray:
+        NUM_WORKERS = mp.cpu_count() - 2
+        ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.DEBUG)
+        outer_config = Config(verbosity=False)
 
-    # start_ind = 0
-    # while start_ind < outer_config.self_play_games:
-    #     inds = list(range(start_ind, min(start_ind + NUM_WORKERS, outer_config.self_play_games)))
-    #
-    #     results = [main.remote() for _ in range(len(inds))]
-    #
-    #     # Wait for all tasks to complete and get the results
-    #     output = ray.get(results)
-    #
-    #     # Print the output of each task
-    #     for i, result in enumerate(output):
-    #         print(f'Task {i} output: {result}')
-    #
-    #     start_ind += NUM_WORKERS
+        start_ind = 0
+        while start_ind < outer_config.self_play_games:
+            inds = list(range(start_ind, min(start_ind + NUM_WORKERS, outer_config.self_play_games)))
+            params = [type_list[type_id] for _ in range(len(inds))]
+            results = [main.remote(params) for _ in range(len(inds))]
+
+            # Wait for all tasks to complete and get the results
+            output = ray.get(results)
+
+            # Print the output of each task
+            for i, result in enumerate(output):
+                print(f'Task {i} output: {result}')
+
+            start_ind += NUM_WORKERS
 
