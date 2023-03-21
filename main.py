@@ -37,10 +37,8 @@ def play_games(pass_dict):
         agent = AlphaZeroChess(config)
 
         key_id_list = []
-        states_white = []
-        states_black = []
-        policy_targets_white = []
-        policy_targets_black = []
+        states = []
+        policy_targets = []
 
         # training loop:
         while not agent.game_over():
@@ -55,48 +53,52 @@ def play_games(pass_dict):
             key_id_list.append(key_id)
             # Print the board
             print(f'The {agent.move_counter.count} move was: {uci_move}')
-            if (agent.move_counter.count % 5) == 0 and (agent.move_counter.count > 0):
+            if agent.move_counter.count > 30:
+                agent.update_temperature()
+            if ((agent.move_counter.count % 5) == 0 and (agent.move_counter.count > 0)) or agent.move_counter.count > 200:
                 agent.tree.width()
                 print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
                 print(agent.board)
                 # if (agent.move_counter.count % 50) == 0:
                 #    draw_board(agent.board, display=True, verbosity=True)
-            if player == 'white':
-                # Append the training data
-                state = board_to_input(config, agent.board)
-                states_white.append(state)
-                policy_targets_white.append(policy_target)
-            else:
-                # Append the training data
-                state = board_to_input(config, agent.board)
-                states_black.append(state)
-                policy_targets_black.append(policy_target)
+            # Append the training data
+            state = board_to_input(config, agent.board)
+            states.append(state)
+            policy_targets.append(policy_target)
 
             # Update the tree
             agent.tree.update_root(uci_move)
             agent.move_counter.increment()
 
             # Print the result of the game
-            if agent.game_over():
+            if agent.game_over() or agent.move_counter.count > config.maximum_moves:
                 print(f'Game Over! Winner is {agent.board.result()}')
                 # add the value outcomes to the training data
-                value_target_white = None
-                value_target_black = None
+                value_target = None
 
                 if agent.board.result() == '1-0':
                     if agent.tree.root.player_to_move == 'black':
-                        value_target_white = 1
-                        value_target_black = -1
+                        value_target = -1
+                    else:
+                        value_target = 1
                 elif agent.board.result() == '0-1':
                     if agent.tree.root.player_to_move == 'white':
-                        value_target_white = -1
-                        value_target_black = 1
+                        value_target = -1
+                    else:
+                        value_target = 1
                 elif agent.board.result() == '1/2-1/2':
-                        value_target_white = 0.25
-                        value_target_black = 0.25
+                    if agent.tree.root.player_to_move == 'black':
+                        value_target = -0.25
+                    else:
+                        value_target = 0.25
+                else:
+                    # penalize long games without resolution
+                    if agent.tree.root.player_to_move == 'black':
+                        value_target = 0.25
+                    else:
+                        value_target = -0.25
 
-                value_targets_white = [value_target_white * config.reward_discount ** (len(policy_targets_white) - i) for i in range(len(policy_targets_white) + 1)]
-                value_targets_black = [value_target_black * config.reward_discount ** (len(policy_targets_black) - i) for i in range(len(policy_targets_black) + 1)]
+                value_targets = [value_target * config.reward_discount ** (len(policy_targets) - i) for i in range(len(policy_targets) + 1)]
 
                 # Update the game counter
                 agent.game_counter.increment()
@@ -106,17 +108,14 @@ def play_games(pass_dict):
                     key_dict['key'] = key_id
                     key_dict['game_id'] = game_id
                     key_dict['move_id'] = j
-                    key_dict['state_white'] = states_white[j]
-                    key_dict['state_black'] = states_black[j]
-                    key_dict['policy_target_white'] = policy_targets_white[j]
-                    key_dict['policy_target_black'] = policy_targets_black[j]
-                    key_dict['value_target_white'] = value_targets_white[j]
-                    key_dict['value_target_black'] = value_targets_black[j]
+                    key_dict['state'] = states[j]
+                    key_dict['policy_target'] = policy_targets[j]
+                    key_dict['value_target'] = value_targets[j]
 
                     # Save the training data
                     save_training_data(agent, key_id, key_dict)
 
-                    break
+                break
 
 
 def train_model(key_prefix):
@@ -154,9 +153,8 @@ def main(in_params):
 
 
 def initialize(in_config):
-    network_white = create_network(in_config)
-    network_black = create_network(in_config)
-    outer_agent = AlphaZeroChess(in_config, network_white=network_white, network_black=network_black)
+    network = create_network(in_config)
+    outer_agent = AlphaZeroChess(in_config, network=network)
     outer_agent.save_networks('network_current')
 
 
@@ -164,7 +162,7 @@ if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train']
     type_id = 1
 
-    min_iterations = 100
+    min_iterations = 1200
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
 
     if type_list[type_id] == 'initialize':

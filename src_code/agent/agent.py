@@ -12,29 +12,33 @@ from src_code.agent.network import create_network
 
 
 class AlphaZeroChess:
-    def __init__(self, config, network_white=None, network_black=None):
+    def __init__(self, config, network=None):
         self.config = config
         self.board = chess.Board()
+        # self.board = chess.Board(None)
+        # # Place the black king at b8 (index 17)
+        # self.board.set_piece_at(18, chess.Piece(chess.KING, chess.BLACK))
+        #
+        # # Place the white king at c6 (index 34)
+        # self.board.set_piece_at(1, chess.Piece(chess.KING, chess.WHITE))
+        #
+        # # Place the white pawn at a2
+        # self.board.set_piece_at(8, chess.Piece(chess.PAWN, chess.BLACK))
+
         self.num_channels = 17
         self.num_moves = 64 * 64
         self.temperature = config.temperature
-        self.temperature_drop = config.temperature_drop
         self.min_temperature = config.min_temperature
         self.sim_counter = config.SimCounter()
         self.move_counter = config.MoveCounter()
         self.game_counter = config.GameCounter()
         self.redis = redis.StrictRedis(host=config.redis_host, port=config.redis_port, db=config.redis_db)
         # Create the value networks
-        if network_white is None:
-            self.network_white = create_network(config)
-            self.load_network_weights_white('network_current_white')
+        if network is None:
+            self.network = create_network(config)
+            self.load_network_weights('network_current')
         else:
-            self.network_white = network_white
-        if network_black is None:
-            self.network_black = create_network(config)
-            self.load_network_weights_black('network_current_black')
-        else:
-            self.network_black = network_black
+            self.network = network
 
         # Assign the optimizer to self.optimizer
         self.optimizer = config.optimizer
@@ -44,7 +48,7 @@ class AlphaZeroChess:
         self.tree = MCTSTree(self)
 
     def update_temperature(self):
-        self.temperature = max(self.temperature * self.temperature_drop, self.min_temperature)
+        self.temperature = self.min_temperature
 
     def reset(self):
         self.board.reset()
@@ -58,18 +62,14 @@ class AlphaZeroChess:
             _ = self.tree.process_mcts(self.tree.root, self.config)
             self.sim_counter.increment()
             if self.sim_counter.get_count() % 100 == 0:
-                print(
-                    f'Game Number: {self.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
+                print(f'Game Number: {self.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
                 self.tree.width()
 
         # retrieve the updated policy
         if self.tree.root.player_to_move == 'white':
-            policy, temp_adj_policy, policy_array = self.tree.get_policy_white(self)
+            policy, policy_uci, temp_adj_policy, policy_array = self.tree.get_policy_white(self)
         else:
-            policy, temp_adj_policy, policy_array = self.tree.get_policy_black(self)
-
-        # Get legal moves
-        legal_moves = get_legal_moves(self.tree.root.board)
+            policy, policy_uci, temp_adj_policy, policy_array = self.tree.get_policy_black(self)
 
         comparator = np.random.rand()
         cumulative_prob = 0
@@ -81,7 +81,7 @@ class AlphaZeroChess:
             action = len(temp_adj_policy) - 1
 
         self.sim_counter.reset()
-        return legal_moves[action], policy, policy_array
+        return policy_uci[action], policy, policy_array
 
     def game_over(self):
         return self.board.is_game_over()
@@ -101,7 +101,7 @@ class AlphaZeroChess:
         else:
             return 0
 
-    def update_network_white(self, states, policy_targets, value_targets):
+    def update_network(self, states, policy_targets, value_targets):
         """Update the neural network with the latest training data."""
         dataset = self.config.ChessDataset(states, policy_targets, value_targets)
         dataloader = tf.data.Dataset.from_generator(lambda: dataset, (tf.float32, tf.float32, tf.float32)).batch(
@@ -130,49 +130,20 @@ class AlphaZeroChess:
             avg_accuracy /= num_batches
             print(f'White network update: Avg loss: {avg_loss:.4f}, Avg accuracy: {avg_accuracy:.4f}')
 
-    def update_network_black(self, states, policy_targets, value_targets):
-        """Update the neural network with the latest training data."""
-        dataset = self.config.ChessDataset(states, policy_targets, value_targets)
-        dataloader = tf.data.Dataset.from_generator(lambda: dataset, (tf.float32, tf.float32, tf.float32)).batch(
-            self.config.batch_size)
-
-        for epoch in range(self.config.num_epochs):
-            avg_loss = 0
-            avg_accuracy = 0
-            num_batches = 0
-            for inputs, policy_targets, value_targets in dataloader:
-                with tf.GradientTape() as tape:
-                    value_preds, policy_preds = self.network(inputs)
-                    value_loss = keras.losses.mean_squared_error(value_targets, value_preds)
-                    policy_loss = keras.losses.categorical_crossentropy(policy_targets, policy_preds)
-                    loss = value_loss + policy_loss
-                gradients = tape.gradient(loss, self.network.trainable_variables)
-                self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
-
-                avg_loss += loss.numpy().mean()
-                policy_accuracy = tf.reduce_mean(
-                    tf.cast(tf.equal(tf.argmax(policy_targets, axis=1), tf.argmax(policy_preds, axis=1)), tf.float32))
-                avg_accuracy += policy_accuracy.numpy()
-                num_batches += 1
-
-            avg_loss /= num_batches
-            avg_accuracy /= num_batches
-            print(f'Black network update: Avg loss: {avg_loss:.4f}, Avg accuracy: {avg_accuracy:.4f}')
-
-    def load_network_weights_white(self, key_name):
+    def load_network_weights(self, key_name):
         # Connect to Redis and retrieve the serialized weights
         serialized_weights = self.redis.get(key_name)
 
         if serialized_weights is None:
             # Initialize the weights if no weights are found in Redis
-            raise Exception(f'No white weights found in Redis: {key_name}')
+            raise Exception(f'No weights found in Redis: {key_name}')
 
         else:
             # Deserialize the weights from the byte string using NumPy
             weights_dict = pickle.loads(serialized_weights)
 
             # Set the weights for each layer of the network
-            for layer in self.network_white.layers:
+            for layer in self.network.layers:
                 layer_name = layer.name
                 if (layer_name[0:5] == 'input' or
                         layer_name[0:3] == 'add' or
@@ -182,44 +153,18 @@ class AlphaZeroChess:
                 layer_weights = weights_dict[layer_name]
                 layer.set_weights([np.array(w) for w in layer_weights])
 
-            print(f"Network_white weights loaded from Redis key '{key_name}'")
-
-    def load_network_weights_black(self, key_name):
-        # Connect to Redis and retrieve the serialized weights
-        serialized_weights = self.redis.get(key_name)
-
-        if serialized_weights is None:
-            # Initialize the weights if no weights are found in Redis
-            raise Exception(f'No black weights found in Redis: {key_name}')
-        else:
-            # Deserialize the weights from the byte string using NumPy
-            weights_dict = pickle.loads(serialized_weights)
-
-            # Set the weights for each layer of the network
-            for layer in self.network_black.layers:
-                layer_name = layer.name
-                if (layer_name[0:5] == 'input' or
-                    layer_name[0:3] == 'add' or
-                    layer_name[0:7] == 'flatten' or
-                    layer_name[0:10] == 'activation'):
-                    continue
-                layer_weights = weights_dict[layer_name]
-                layer.set_weights([np.array(w) for w in layer_weights])
-
-            print(f"Network_black weights loaded from Redis key '{key_name}'")
+            print(f"Network weights loaded from Redis key '{key_name}'")
 
     def save_networks(self, key_name):
-        self.save_network_weights_white(key_name+'_white')
-        self.save_network_weights_black(key_name+'_black')
+        self.save_network_weights(key_name)
 
     def load_networks(self, key_name):
-        self.load_network_weights_white(key_name+'_white')
-        self.load_network_weights_black(key_name+'_black')
+        self.load_network_weights(key_name)
 
-    def save_network_weights_white(self, key_name):
+    def save_network_weights(self, key_name):
         # Convert the weights to a dictionary
         weights_dict = {}
-        for layer in self.network_white.layers:
+        for layer in self.network.layers:
             if len(layer.get_weights()) > 0:  # Check if the layer has any weights
                 weights_dict[layer.name] = [w.tolist() for w in layer.get_weights()]
 
@@ -229,22 +174,7 @@ class AlphaZeroChess:
         # Connect to Redis and save the weights using the specified key name
         self.redis.set(key_name, pickle_dict)
 
-        print(f"Network white weights saved to Redis key '{key_name}'")
-
-    def save_network_weights_black(self, key_name, ):
-        # Convert the weights to a dictionary
-        weights_dict = {}
-        for layer in self.network_black.layers:
-            if len(layer.get_weights()) > 0:  # Check if the layer has any weights
-                weights_dict[layer.name] = [w.tolist() for w in layer.get_weights()]
-
-        # Serialize the dictionary to a byte string using NumPy
-        pickle_dict = pickle.dumps(weights_dict)
-
-        # Connect to Redis and save the weights using the specified key name
-        self.redis.set(key_name, pickle_dict)
-
-        print(f"Network black weights saved to Redis key '{key_name}'")
+        print(f"Network weights saved to Redis key '{key_name}'")
 
 
 def board_to_input(config, board):
@@ -310,14 +240,15 @@ class MCTSTree:
     # https://towardsdatascience.com/monte-carlo-tree-search-an-introduction-503d8c04e168
     def __init__(self, az):
         self.root = Node(az.state, az.board)
-        self.network_white = az.network_white
-        self.network_black = az.network_black
+        self.network = az.network
         self.config = az.config
 
     def get_policy_white(self, agent):
         # Get the policy from the root node
         epsilon = 1e-8
-        policy = [child.Nvisit_white for child in self.root.children]
+        policy = [child.Nvisit for child in self.root.children]
+        policy_uci = [child.name for child in self.root.children]
+
         if any(math.isnan(pol) for pol in policy):
             policy = np.array([1 * self.root.children[i].board.is_game_over() for i in range(len(self.root.children))])
         # Normalize the policy
@@ -326,17 +257,18 @@ class MCTSTree:
         # Adjust the policy according to the temperature
         temp_adj_policy = np.power(policy, 1 / agent.temperature)
         temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature)) + epsilon
-        agent.update_temperature()
 
-        policy_array = policy_to_prob_array(policy, [child.name for child in self.root.children],
+        policy_array = policy_to_prob_array(policy, policy_uci,
                                             self.config.all_chess_moves)
 
-        return policy, temp_adj_policy, policy_array
+        return policy, policy_uci, temp_adj_policy, policy_array
 
     def get_policy_black(self, agent):
         # Get the policy from the root node
         epsilon = 1e-8
-        policy = [child.Nvisit_black for child in self.root.children]
+        policy = [child.Nvisit for child in self.root.children]
+        policy_uci = [child.name for child in self.root.children]
+
         if any(math.isnan(pol) for pol in policy):
             policy = np.array([1 * self.root.children[i].board.is_game_over() for i in range(len(self.root.children))])
         # Normalize the policy
@@ -345,27 +277,27 @@ class MCTSTree:
         # Adjust the policy according to the temperature
         temp_adj_policy = np.power(policy, 1 / agent.temperature)
         temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature))
-        agent.update_temperature()
 
-        policy_array = policy_to_prob_array(policy, [child.name for child in self.root.children],
+        policy_array = policy_to_prob_array(policy, policy_uci,
                                             self.config.all_chess_moves)
 
-        return policy, temp_adj_policy, policy_array
+        return policy, policy_uci, temp_adj_policy, policy_array
 
     def process_mcts(self, node, config):
+        epsilon = 1e-8
         policy = []
         if node.board.is_game_over():
             winner = node.board.result()
             node.game_over = True
             if winner == '1-0':
-                node.prior_value_white = 1
-                node.prior_value_black = -1
+                node.prior_value = 1
             elif winner == '0-1':
-                node.prior_value_white = -1
-                node.prior_value_black = 1
+                node.prior_value = -1
             elif winner == '1/2-1/2':
-                node.prior_value_white = 0.25
-                node.prior_value_black = 0.25
+                if node.parent.player_to_move == 'black':
+                    node.prior_value = -0.25
+                elif node.parent.player_to_move == 'white':
+                    node.prior_value = 0.25
 
             return policy
         # Select a node to expand
@@ -375,45 +307,43 @@ class MCTSTree:
 
         # Evaluate the node
         max_uct = -float('inf')
+        min_uct = float('inf')
         best_node = None
 
         for child in node.children:
+            uct = child.Qreward + self.config.c_puct * child.prior_prob * math.sqrt(
+                node.Nvisit + epsilon) / (1 + child.Nvisit)
+            policy.append(child.prior_prob)
             if node.player_to_move == 'white':
-                uct = child.Qreward_white + self.config.c_puct * child.prior_prob_white * math.sqrt(
-                    node.Nvisit_white) / (1 + child.Nvisit_white)
-                policy.append(child.prior_prob_white)
-            else:
-                uct = child.Qreward_black + self.config.c_puct * child.prior_prob_black * math.sqrt(
-                    node.Nvisit_black) / (1 + child.Nvisit_black)
-                policy.append(child.prior_prob_black)
-            if uct > max_uct:
-                max_uct = uct
-                best_node = child
+                if uct > max_uct:
+                    max_uct = uct
+                    best_node = child
+            elif node.player_to_move == 'black':
+                if uct < min_uct:
+                    min_uct = uct
+                    best_node = child
 
         # Simulate a game from the best_node
         _ = self.process_mcts(best_node, config)
 
         # Backpropagate the results of the simulation
-        node.Qreward_white = (node.Qreward_white * node.Nvisit_white + node.prior_value_white) / (node.Nvisit_white + 1)
-        node.Qreward_black = (node.Qreward_black * node.Nvisit_black + node.prior_value_black) / (node.Nvisit_black + 1)
-        node.Nvisit_white += 1
-        node.Nvisit_black += 1
 
+        best_node.Qreward = (best_node.Qreward * best_node.Nvisit + best_node.prior_value) / (best_node.Nvisit + 1)
+        best_node.Nvisit += 1
+
+        node.Nvisit += 1
         return policy
 
     def expand(self, leaf_node):
         state = board_to_input(self.config, leaf_node.board)
         # Generate all legal moves from the current state and create child nodes for each move
-        if leaf_node.player_to_move == 'white':
-            pi, v = self.network_white.predict(np.expand_dims(leaf_node.state, axis=0), verbose=0)
-            self.root.prior_value_white = v
-        else:
-            pi, v = self.network_black.predict(np.expand_dims(leaf_node.state, axis=0), verbose=0)
-            self.root.prior_value_black = v
+
+        pi, v = self.network.predict(np.expand_dims(leaf_node.state, axis=0), verbose=0)
+        leaf_node.prior_value = -1 * v[0][0]
 
         # Add Dirichlet noise to the prior probabilities
         alpha = self.config.dirichlet_alpha
-        noise = np.random.dirichlet(alpha * np.ones(len(pi)))
+        noise = np.random.dirichlet(alpha * np.ones(len(pi[0])))
         pi = (1 - self.config.eps) * pi[0] + self.config.eps * noise
         pi = np.array(pi) / sum(pi)
 
@@ -437,13 +367,10 @@ class MCTSTree:
                 player_to_move = 'white'
             child = Node(state, new_board, name=action, player_to_move=player_to_move)
             child.parent = leaf_node
-            if leaf_node.player_to_move == 'white':
-                child.prior_prob_white = legal_probabilities[i]
-            else:
-                child.prior_prob_black = legal_probabilities[i]
+            child.prior_prob = legal_probabilities[i]
             leaf_node.children.append(child)
 
-        return pi
+        return legal_probabilities
 
     def update_root(self, action):
         for child in self.root.children:
@@ -496,14 +423,10 @@ class Node:
     def __init__(self, state, board, player_to_move='white', name='root'):
         self.state = state
         self.board = copy.deepcopy(board)
-        self.Qreward_white = 0
-        self.Qreward_black = 0
-        self.Nvisit_white = 0
-        self.Nvisit_black = 0
-        self.prior_prob_white = 0
-        self.prior_prob_black = 0
-        self.prior_value_white = 0
-        self.prior_value_black = 0
+        self.Qreward = 0
+        self.Nvisit = 0
+        self.prior_prob = 0
+        self.prior_value = 0
         self.children = []
         self.player_to_move = player_to_move
         self.parent = None

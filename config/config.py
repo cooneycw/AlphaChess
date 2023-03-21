@@ -16,10 +16,9 @@ class Config:
         # Training settings
         self.num_epochs = 10
         self.batch_size = 32
-        self.maximum_moves = 100
+        self.maximum_moves = 200
         self.temperature = 1
-        self.temperature_drop = 0.99
-        self.min_temperature = 0.1
+        self.min_temperature = 0.01
         self.learning_rate = 0.01
         self.momentum = 0.9
         self.weight_decay = 1e-4

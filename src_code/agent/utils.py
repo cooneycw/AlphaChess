@@ -90,8 +90,11 @@ def get_board_piece_count(board):
 def save_training_data(agent, key_name, save_dict):
     # Connect to Redis and save the training data using the specified key name
     pickled_dict = pickle.dumps(save_dict)
-    agent.redis.set(key_name, save_dict)
-    print(f"Training data saved to Redis key '{key_name}'  Value target white:{save_dict['value_target_white']}  Value target black:{save_dict['value_target_black']}")
+    result = agent.redis.set(key_name, pickled_dict)
+    if result is True:
+        print(f"Training data saved to Redis key '{key_name}'  Value target white:{save_dict['value_target_white']}  Value target black:{save_dict['value_target_black']}")
+    else:
+        print(f"Error saving training data to Redis key '{key_name}'")
 
 
 def load_training_data(agent, key_name):
@@ -103,6 +106,9 @@ def load_training_data(agent, key_name):
 
 
 def scan_redis_for_training_data(agent, match):
+    key_list = []
     # Connect to Redis and scan for keys that start with 'training_data'
     keys = agent.redis.scan_iter(match=match)
-    return keys
+    for key in keys:
+        key_list.append(key.decode('utf-8'))
+    return key_list
