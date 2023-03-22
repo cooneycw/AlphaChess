@@ -115,7 +115,7 @@ def play_games(pass_dict):
                     # Save the training data
                     save_training_data(agent, key_id, key_dict)
 
-                break
+
 
 
 def train_model(key_prefix):
