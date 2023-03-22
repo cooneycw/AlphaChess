@@ -55,7 +55,7 @@ def play_games(pass_dict):
             print(f'The {agent.move_counter.count} move was: {uci_move}')
             if agent.move_counter.count > 30:
                 agent.update_temperature()
-            if ((agent.move_counter.count % 5) == 0 and (agent.move_counter.count > 0)) or agent.move_counter.count > 200:
+            if ((agent.move_counter.count % 5) == 0 and (agent.move_counter.count > 0)) or agent.move_counter.count > 150:
                 agent.tree.width()
                 print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
                 print(agent.board)
@@ -77,26 +77,13 @@ def play_games(pass_dict):
                 value_target = None
 
                 if agent.board.result() == '1-0':
-                    if agent.tree.root.player_to_move == 'black':
-                        value_target = -1
-                    else:
-                        value_target = 1
+                    value_target = 1
                 elif agent.board.result() == '0-1':
-                    if agent.tree.root.player_to_move == 'white':
-                        value_target = -1
-                    else:
-                        value_target = 1
+                    value_target = -1
                 elif agent.board.result() == '1/2-1/2':
-                    if agent.tree.root.player_to_move == 'black':
-                        value_target = -0.25
-                    else:
-                        value_target = 0.25
+                    value_target = 0
                 else:
-                    # penalize long games without resolution
-                    if agent.tree.root.player_to_move == 'black':
-                        value_target = 0.25
-                    else:
-                        value_target = -0.25
+                    value_target = 0
 
                 value_targets = [value_target * config.reward_discount ** (len(policy_targets) - i) for i in range(len(policy_targets) + 1)]
 
