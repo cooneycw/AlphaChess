@@ -146,9 +146,14 @@ class AlphaZeroChess:
             for layer in self.network.layers:
                 layer_name = layer.name
                 if (layer_name[0:5] == 'input' or
-                        layer_name[0:3] == 'add' or
-                        layer_name[0:7] == 'flatten' or
-                        layer_name[0:10] == 'activation'):
+                        layer_name[0:7] == 'res_add' or
+                        layer_name[0:10] == 'value_relu' or
+                        layer_name[0:11] == 'policy_relu' or
+                        layer_name[0:13] == 'value_flatten' or
+                        layer_name[0:14] == 'policy_flatten' or
+                        layer_name[0:10] == 'activation' or
+                        layer_name[0:4] == 'relu' or
+                        layer_name[0:8] == 'res_relu'):
                     continue
                 layer_weights = weights_dict[layer_name]
                 layer.set_weights([np.array(w) for w in layer_weights])
