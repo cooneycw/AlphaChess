@@ -136,7 +136,7 @@ def main(in_params):
     type = in_params['type']
     num_iterations = in_params['num_iterations']
     print(f'Running the main function with type: {type}')
-    key_prefix = 'azChess_trainingData_test'
+    key_prefix = 'azChess_ThreadripperData_test'
 
     if type == 'create_training_data':
         game_id = generate_game_id()
