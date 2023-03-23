@@ -29,6 +29,7 @@ class AlphaZeroChess:
         self.num_moves = 64 * 64
         self.temperature = config.temperature
         self.min_temperature = config.min_temperature
+        self.temperature_threshold = config.temperature_threshold
         self.sim_counter = config.SimCounter()
         self.move_counter = config.MoveCounter()
         self.game_counter = config.GameCounter()
@@ -42,7 +43,6 @@ class AlphaZeroChess:
 
         # Assign the optimizer to self.optimizer
         self.optimizer = config.optimizer
-        self.state = board_to_input(config, self.board)
 
         # Initialize the MCTS tree
         self.tree = MCTSTree(self)
@@ -59,7 +59,8 @@ class AlphaZeroChess:
         """Get the best action to take given the current state of the board."""
         """Uses dirichlet noise to encourage exploration in place of temperature."""
         while self.sim_counter.get_count() < self.config.num_iterations:
-            _ = self.tree.process_mcts(self.tree.root, self.config)
+            first_expand = True
+            _ = self.tree.process_mcts(self.tree.root, self.config, first_expand)
             self.sim_counter.increment()
             if self.sim_counter.get_count() % 100 == 0:
                 print(f'Game Number: {self.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
@@ -244,7 +245,7 @@ def move_to_index(move):
 class MCTSTree:
     # https://towardsdatascience.com/monte-carlo-tree-search-an-introduction-503d8c04e168
     def __init__(self, az):
-        self.root = Node(az.state, az.board)
+        self.root = Node(az.board)
         self.network = az.network
         self.config = az.config
 
@@ -288,7 +289,7 @@ class MCTSTree:
 
         return policy, policy_uci, temp_adj_policy, policy_array
 
-    def process_mcts(self, node, config):
+    def process_mcts(self, node, config, first_expand):
         epsilon = 1e-8
         policy = []
         if node.board.is_game_over():
@@ -307,7 +308,7 @@ class MCTSTree:
             return policy
         # Select a node to expand
         if len(node.children) == 0:
-            policy = self.expand(node)
+            policy, first_expand = self.expand(node, first_expand)
             return policy
 
         # Evaluate the node
@@ -329,7 +330,7 @@ class MCTSTree:
                     best_node = child
 
         # Simulate a game from the best_node
-        _ = self.process_mcts(best_node, config)
+        _ = self.process_mcts(best_node, config, first_expand)
 
         # Backpropagate the results of the simulation
 
@@ -339,18 +340,22 @@ class MCTSTree:
         node.Nvisit += 1
         return policy
 
-    def expand(self, leaf_node):
+    def expand(self, leaf_node, first_expand):
+        # Get the policy and value from the neural network
         state = board_to_input(self.config, leaf_node.board)
-        # Generate all legal moves from the current state and create child nodes for each move
-
-        pi, v = self.network.predict(np.expand_dims(leaf_node.state, axis=0), verbose=0)
+        pi, v = self.network.predict(np.expand_dims(state, axis=0), verbose=0)
         leaf_node.prior_value = -1 * v[0][0]
 
         # Add Dirichlet noise to the prior probabilities
-        alpha = self.config.dirichlet_alpha
-        noise = np.random.dirichlet(alpha * np.ones(len(pi[0])))
-        pi = (1 - self.config.eps) * pi[0] + self.config.eps * noise
-        pi = np.array(pi) / sum(pi)
+        if first_expand:
+            alpha = self.config.dirichlet_alpha
+            noise = np.random.dirichlet(alpha * np.ones(len(pi[0])))
+            pi = (1 - self.config.eps) * pi[0] + self.config.eps * noise
+            pi = np.array(pi) / sum(pi)
+            first_expand = False
+        else:
+            pi = pi[0]
+            pi = np.array(pi) / sum(pi)
 
         legal_moves = get_legal_moves(leaf_node.board)
 
@@ -370,12 +375,12 @@ class MCTSTree:
                 player_to_move = 'black'
             else:
                 player_to_move = 'white'
-            child = Node(state, new_board, name=action, player_to_move=player_to_move)
+            child = Node(new_board, name=action, player_to_move=player_to_move)
             child.parent = leaf_node
             child.prior_prob = legal_probabilities[i]
             leaf_node.children.append(child)
 
-        return legal_probabilities
+        return legal_probabilities, first_expand
 
     def update_root(self, action):
         for child in self.root.children:
@@ -425,8 +430,7 @@ def policy_to_prob_array(policy, legal_moves, all_moves_list):
 
 
 class Node:
-    def __init__(self, state, board, player_to_move='white', name='root'):
-        self.state = state
+    def __init__(self, board, player_to_move='white', name='root'):
         self.board = copy.deepcopy(board)
         self.Qreward = 0
         self.Nvisit = 0

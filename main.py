@@ -53,9 +53,9 @@ def play_games(pass_dict):
             key_id_list.append(key_id)
             # Print the board
             print(f'The {agent.move_counter.count} move was: {uci_move}')
-            if agent.move_counter.count > 30:
+            if agent.move_counter.count > agent.temperature_threshold:
                 agent.update_temperature()
-            if ((agent.move_counter.count % 5) == 0 and (agent.move_counter.count > 0)) or agent.move_counter.count > 150:
+            if (agent.move_counter.count % 1) == 0 and (agent.move_counter.count > 0):
                 agent.tree.width()
                 print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
                 print(agent.board)
@@ -81,7 +81,11 @@ def play_games(pass_dict):
                 elif agent.board.result() == '0-1':
                     value_target = -1
                 elif agent.board.result() == '1/2-1/2':
-                    value_target = 0
+                    # modify for white players
+                    if player == 'white':
+                        value_target = 0.25
+                    else:
+                        value_target = -0.25
                 else:
                     value_target = 0
 
@@ -149,7 +153,7 @@ if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train']
     type_id = 1
 
-    min_iterations = 1200
+    min_iterations = 2000
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
 
     if type_list[type_id] == 'initialize':

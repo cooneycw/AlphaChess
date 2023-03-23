@@ -16,9 +16,10 @@ class Config:
         # Training settings
         self.num_epochs = 10
         self.batch_size = 32
-        self.maximum_moves = 200
+        self.maximum_moves = 150
         self.temperature = 1
         self.min_temperature = 0.01
+        self.temperature_threshold = 150
         self.learning_rate = 0.01
         self.momentum = 0.9
         self.weight_decay = 1e-4
@@ -36,6 +37,7 @@ class Config:
         self.MoveCounter = MoveCounter
         self.GameCounter = GameCounter
         self.ChessDataset = ChessDataset
+
 
 
 def create_all_moves_list():
