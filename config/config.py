@@ -35,10 +35,8 @@ class Config:
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter
-        self.GameCounter = GameCounter
+        self.game_counter = GameCounter()
         self.ChessDataset = ChessDataset
-
-
 
 def create_all_moves_list():
     all_moves_list = []

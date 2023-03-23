@@ -32,7 +32,6 @@ class AlphaZeroChess:
         self.temperature_threshold = config.temperature_threshold
         self.sim_counter = config.SimCounter()
         self.move_counter = config.MoveCounter()
-        self.game_counter = config.GameCounter()
         self.redis = redis.StrictRedis(host=config.redis_host, port=config.redis_port, db=config.redis_db)
         # Create the value networks
         if network is None:
@@ -63,7 +62,7 @@ class AlphaZeroChess:
             _ = self.tree.process_mcts(self.tree.root, self.config, first_expand)
             self.sim_counter.increment()
             if self.sim_counter.get_count() % int(0.5 + 0.5*self.config.num_iterations) == 0:
-                print(f'Game Number: {self.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
+                print(f'Game Number: {self.config.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
                 self.tree.width()
 
         # retrieve the updated policy

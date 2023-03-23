@@ -92,7 +92,7 @@ def play_games(pass_dict):
                 value_targets = [value_target * config.reward_discount ** (len(policy_targets) - i) for i in range(len(policy_targets) + 1)]
 
                 # Update the game counter
-                agent.game_counter.increment()
+                config.game_counter.increment()
 
                 for j, key_id in enumerate(key_id_list):
                     key_dict = dict()
