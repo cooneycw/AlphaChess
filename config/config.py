@@ -38,6 +38,7 @@ class Config:
         self.game_counter = GameCounter()
         self.ChessDataset = ChessDataset
 
+
 def create_all_moves_list():
     all_moves_list = []
 
