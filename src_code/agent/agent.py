@@ -62,7 +62,7 @@ class AlphaZeroChess:
             first_expand = True
             _ = self.tree.process_mcts(self.tree.root, self.config, first_expand)
             self.sim_counter.increment()
-            if self.sim_counter.get_count() % 100 == 0:
+            if self.sim_counter.get_count() % int(0.5 + 0.5*self.config.num_iterations) == 0:
                 print(f'Game Number: {self.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
                 self.tree.width()
 
