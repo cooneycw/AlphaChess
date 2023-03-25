@@ -6,3 +6,6 @@ def scan_redis_for_networks(agent, match):
         key_list.append(key.decode('utf-8'))
     return key_list
 
+
+def delete_redis_key(agent, key):
+    agent.redis.delete(key)
