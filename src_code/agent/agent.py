@@ -88,11 +88,11 @@ class AlphaZeroChess:
         return policy_uci[action], policy, policy_array
 
     def game_over(self):
-        return self.board.is_game_over()
+        return self.board.is_game_over(claim_draw=True)
 
     def get_result(self):
         # Check if the game is over
-        if self.board.is_game_over():
+        if self.board.is_game_over(claim_draw=True):
             # Check if the game ended in checkmate
             if self.board.is_checkmate():
                 # Return 1 if white wins, 0 if black wins
@@ -291,7 +291,7 @@ class MCTSTree:
         policy_uci = [child.name for child in self.root.children]
 
         if any(math.isnan(pol) for pol in policy):
-            policy = np.array([1 * self.root.children[i].board.is_game_over() for i in range(len(self.root.children))])
+            policy = np.array([1 * self.root.children[i].board.is_game_over(claim_draw=True) for i in range(len(self.root.children))])
         # Normalize the policy
         policy = np.array(policy) / (sum(policy) + epsilon)
 
@@ -311,7 +311,7 @@ class MCTSTree:
         policy_uci = [child.name for child in self.root.children]
 
         if any(math.isnan(pol) for pol in policy):
-            policy = np.array([1 * self.root.children[i].board.is_game_over() for i in range(len(self.root.children))])
+            policy = np.array([1 * self.root.children[i].board.is_game_over(claim_draw=True) for i in range(len(self.root.children))])
         # Normalize the policy
         policy = np.array(policy) / (sum(policy) + epsilon)
 

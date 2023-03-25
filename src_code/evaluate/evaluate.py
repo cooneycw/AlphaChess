@@ -35,7 +35,7 @@ def evaluate_network(in_dict):
         agent_candidate.load_networks(key)
         move_cnt = 0
 
-        while not board.is_game_over():
+        while not board.is_game_over(claim_draw=True):
             if player_to_go == 'current':
                 uci_move, _, _ = agent_current.get_action()
                 _, _, _ = agent_candidate.get_action(iters=120)
@@ -58,21 +58,22 @@ def evaluate_network(in_dict):
             print(f'The {move_cnt} move was: {uci_move}')
             print(f'Piece count (white / black): {get_board_piece_count(board)} White: {starting_player}')
             print(board)
-            if board.is_game_over(claim_draw=True):
-                if result == '1-0':
-                    if player_to_go == 'current':
-                        challenger_wins += 1
-                    else:
-                        challenger_losses += 1
-                elif result == '0-1':
-                    if player_to_go == 'current':
-                        challenger_losses += 1
-                    else:
-                        challenger_wins += 1
+
+        if board.is_game_over(claim_draw=True):
+            if result == '1-0':
+                if player_to_go == 'current':
+                    challenger_wins += 1
                 else:
-                    challenger_draws += 1
-                game_cnt += 1
-                print(f'Games: {game_cnt} {challenger_wins / game_cnt} Challenger wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
+                    challenger_losses += 1
+            elif result == '0-1':
+                if player_to_go == 'current':
+                    challenger_losses += 1
+                else:
+                    challenger_wins += 1
+            else:
+                challenger_draws += 1
+            game_cnt += 1
+            print(f'Games: {game_cnt} {challenger_wins / game_cnt} Challenger wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
 
     # Save candidate network if it wins and delete it if it loses
     if (challenger_wins / game_cnt) > 0.55:
