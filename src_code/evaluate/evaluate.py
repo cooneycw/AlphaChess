@@ -38,9 +38,11 @@ def evaluate_network(in_dict):
         while not board.is_game_over():
             if player_to_go == 'current':
                 uci_move, _, _ = agent_current.get_action()
+                _, _, _ = agent_candidate.get_action(iters=120)
                 player_to_go = 'candidate'
             else:
                 uci_move, _, _ = agent_candidate.get_action()
+                _, _, _ = agent_current.get_action(iters=120)
                 player_to_go = 'current'
 
             board.push_uci(uci_move)

@@ -55,10 +55,13 @@ class AlphaZeroChess:
         self.tree = MCTSTree(self)
         self.move_counter = self.config.MoveCounter()
 
-    def get_action(self):
+    def get_action(self, iters=None):
+        if iters is None:
+            iters = self.config.num_iterations
+
         """Get the best action to take given the current state of the board."""
         """Uses dirichlet noise to encourage exploration in place of temperature."""
-        while self.sim_counter.get_count() < self.config.num_iterations:
+        while self.sim_counter.get_count() < iters:
             first_expand = True
             _ = self.tree.process_mcts(self.tree.root, self.config, first_expand)
             self.sim_counter.increment()
