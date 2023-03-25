@@ -11,9 +11,9 @@ from config.config import Config, interpolate
 from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
 from src_code.agent.utils import draw_board, visualize_tree, get_board_piece_count, generate_game_id, save_training_data, load_training_data, scan_redis_for_training_data
 
-USE_RAY = False
+USE_RAY = True
 if USE_RAY:
-    NUM_WORKERS = mp.cpu_count() - 2
+    NUM_WORKERS = 1
     ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.DEBUG)
 
 logging.getLogger('tensorflow').setLevel(logging.WARNING)
@@ -30,11 +30,12 @@ def play_games(pass_dict):
     game_id = pass_dict['game_id']
     key_prefix = pass_dict['key_prefix']
     num_iterations = pass_dict['num_iterations']
+    self_play_games = pass_dict['self_play_games']
     # Initialize the config and agent
     config = Config(num_iterations, verbosity=False)
 
     # Play the game
-    for i in range(config.self_play_games):
+    for i in range(self_play_games):
         agent = AlphaZeroChess(config)
 
         key_id_list = []
@@ -137,6 +138,7 @@ def main(in_params):
         pass_dict['game_id'] = game_id
         pass_dict['key_prefix'] = key_prefix
         pass_dict['num_iterations'] = num_iterations
+        pass_dict['self_play_games'] = 1
         play_games(pass_dict)
 
     elif type == 'train':
