@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess, board_to_input
+from src_code.agent.utils import get_board_piece_count
 from src_code.evaluate.utils import scan_redis_for_networks, delete_redis_key
 
 
@@ -26,6 +27,7 @@ def evaluate_network(in_dict):
             player_to_go = 'current'
         else:
             player_to_go = 'candidate'
+        starting_player = player_to_go
         print(f'Game {i} Player to go: {player_to_go}')
         board = chess.Board()
         agent_current = AlphaZeroChess(config)
@@ -35,21 +37,25 @@ def evaluate_network(in_dict):
 
         while not board.is_game_over():
             if player_to_go == 'current':
-                action = agent_current.get_action(board_to_input(board))
+                uci_move, _, _ = agent_current.get_action()
                 player_to_go = 'candidate'
             else:
-                action = agent_candidate.get_action(board_to_input(board))
+                uci_move, _, _ = agent_candidate.get_action()
                 player_to_go = 'current'
-            board.push(action)
+
+            board.push_uci(uci_move)
             move_cnt += 1
             if move_cnt > 20:
                 agent_current.update_temperature()
                 agent_candidate.update_temperature()
-            agent_current.board = board
-            agent_candidate.board = board
-            agent_current.tree.update_root(action)
-            agent_candidate.tree.update_root(action)
+            agent_current.board.push_uci(uci_move)
+            agent_candidate.board.push_uci(uci_move)
+            agent_current.tree.update_root(uci_move)
+            agent_candidate.tree.update_root(uci_move)
             result = board.result()
+            print(f'The {move_cnt} move was: {uci_move}')
+            print(f'Piece count (white / black): {get_board_piece_count(board)} White: {starting_player}')
+            print(board)
             if board.is_game_over(claim_draw=True):
                 if result == '1-0':
                     if player_to_go == 'current':
