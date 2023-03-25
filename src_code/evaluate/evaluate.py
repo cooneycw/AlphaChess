@@ -1,12 +1,19 @@
 import chess
 import numpy as np
 import tensorflow as tf
+from config.config import Config
 from src_code.agent.agent import AlphaZeroChess, board_to_input
+from src_code.evaluate.utils import scan_redis_for_networks, load_network
 
 
-def evaluate_network(agent_path, opponent_path, num_games):
-    agent = tf.keras.models.load_model(agent_path)
-    opponent = tf.keras.models.load_model(opponent_path)
+def evaluate_network(in_dict):
+    num_evals = in_dict['num_evals']
+    network_prefix = in_dict['network_prefix']
+    config = Config(num_iterations=1600, verbosity=False)
+    agent_current = AlphaZeroChess(config)
+    agent_candidate = AlphaZeroChess(config)
+
+    network_keys = scan_redis_for_networks(agent_current, network_prefix)
 
     num_wins = 0
     num_losses = 0
@@ -45,3 +52,8 @@ def evaluate_network(agent_path, opponent_path, num_games):
         print(f"Game {i+1}/{num_games}: {result}")
 
     print(f"Results: {num_wins} wins, {num_losses} losses, {num_draws} draws")
+
+
+def get_networks():
+    config = Config(num_iterations=None, verbosity=False)
+    agent = AlphaZeroChess(config)

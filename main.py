@@ -11,6 +11,7 @@ from config.config import Config, interpolate
 from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
 from src_code.agent.self_play import play_games
 from src_code.agent.train import train_model
+from src_code.evaluate.evaluate import evaluate_network
 from src_code.agent.utils import draw_board, visualize_tree, get_board_piece_count, generate_game_id, save_training_data, load_training_data, scan_redis_for_training_data
 
 import os
@@ -40,6 +41,7 @@ def main(in_params):
     print(f'in_params: {in_params}')
     type = in_params['type']
     num_iterations = in_params['num_iterations']
+    num_evals = in_params['num_evals']
     print(f'Running the main function with type: {type}')
     key_prefix = 'azChess_ThreadripperData_test'
 
@@ -58,7 +60,13 @@ def main(in_params):
         train_model(key_prefix)
         return f'Finished running the main function with type: {type}'
 
-
+    elif type == 'evaluate':
+        pass_dict = dict()
+        pass_dict['num_evals'] = num_evals
+        pass_dict['num_iterations'] = num_iterations
+        pass_dict['network_prefix'] = 'network_candidate_*'
+        evaluate_network(pass_dict)
+        return f'Finished running the main function with type: {type}'
 
 
 def initialize(in_config):
@@ -68,8 +76,8 @@ def initialize(in_config):
 
 
 if __name__ == '__main__':
-    type_list = ['initialize', 'create_training_data', 'train']
-    type_id = 2
+    type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
+    type_id = 3
 
     min_iterations = 2000
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
@@ -81,13 +89,13 @@ if __name__ == '__main__':
         params = dict()
         params['type'] = type_list[type_id]
         params['num_iterations'] = min_iterations
+        params['num_evals'] = outer_config.num_evaluation_games
         params['self_play_games'] = 1
         outcome = main(params)
         print(f'Outcome: {outcome}')
     elif type_list[type_id] != 'initialize' and USE_RAY is True:
 
         max_num_iterations = 1600
-
         outer_config = Config(min_iterations, verbosity=False)
 
         start_ind = 0
@@ -100,6 +108,8 @@ if __name__ == '__main__':
                 params_item = dict()
                 params_item['type'] = type_list[type_id]
                 params_item['num_iterations'] = int(0.5 + interpolate(min_iterations, max_num_iterations, (min(ind, 5000)/5000)))
+                params_item['num_evals'] = outer_config.num_evaluation_games
+                params_item['self_play_games'] = 1
                 params_list.append(params_item)
 
             results = [main_ray.remote(params_list[j]) for j in range(len(inds))]
@@ -112,3 +122,4 @@ if __name__ == '__main__':
                 print(f'Task {i} output: {result}')
 
             start_ind += NUM_WORKERS
+
