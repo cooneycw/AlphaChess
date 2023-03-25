@@ -423,9 +423,11 @@ class MCTSTree:
                 self.remove_node_and_descendants(child)
         for child in self.root.children:
             if child.name == action:
+                del_nxt = self.root
                 self.root = child
                 self.root.parent = None
                 self.root.name = 'root'
+                del del_nxt
 
     def remove_node_and_descendants(self, node):
         for child in node.children:

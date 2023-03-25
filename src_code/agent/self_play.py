@@ -88,4 +88,5 @@ def play_games(pass_dict):
                     save_training_data(agent, key_id, key_dict)
 
         del agent
+        gc_list = gc.get_objects()
         gc.collect()

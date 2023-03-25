@@ -11,11 +11,13 @@ from config.config import Config, interpolate
 from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
 from src_code.agent.self_play import play_games
 from src_code.agent.train import train_model
-from src_code.evaluate.evaluate import evaluate_network
+from src_code.evaluate.evaluate import run_evaluation
+from src_code.evaluate.utils import scan_redis_for_networks, delete_redis_key
 from src_code.agent.utils import draw_board, visualize_tree, get_board_piece_count, generate_game_id, save_training_data, load_training_data, scan_redis_for_training_data
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 
 USE_RAY = False
 if USE_RAY:
@@ -60,14 +62,6 @@ def main(in_params):
         train_model(key_prefix)
         return f'Finished running the main function with type: {type}'
 
-    elif type == 'evaluate':
-        pass_dict = dict()
-        pass_dict['num_evals'] = num_evals
-        pass_dict['num_iterations'] = num_iterations
-        pass_dict['network_prefix'] = 'network_candidate_*'
-        evaluate_network(pass_dict)
-        return f'Finished running the main function with type: {type}'
-
 
 def initialize(in_config):
     network = create_network(in_config)
@@ -93,6 +87,50 @@ if __name__ == '__main__':
         params['self_play_games'] = 1
         outcome = main(params)
         print(f'Outcome: {outcome}')
+    if type_list[type_id] == 'evaluate':
+        assert USE_RAY is True, 'USE_RAY must be True'
+        config = Config(num_iterations=1600, verbosity=False)
+        agent_admin = AlphaZeroChess(config)
+
+        network_keys = scan_redis_for_networks(agent_admin, 'network_candidate_*')
+        key = network_keys[0]
+        print(f'Evaluating network {key} using {config.num_evaluation_games} games...')
+        input_dict = dict()
+        input_dict['eval_game_id'] = None
+        input_dict['key'] = key
+
+        challenger_wins = 0
+        challenger_losses = 0
+        challenger_draws = 0
+
+        game_cnt = 0
+        max_evals = config.num_evaluation_games
+        for i in range(0, max_evals):
+            inds = [x for x in range(i, min(i + NUM_WORKERS, max_evals))]
+
+            input_dict_list = []
+            for ind in inds:
+                input_dict['eval_game_id'] = ind
+                input_dict_list.append(copy.deepcopy(input_dict))
+
+            results = ray.get([run_evaluation.remote(input_dict['eval_game_id'], input_dict['key']) for input_dict in input_dict_list])
+
+            for result in results:
+                game_cnt += 1
+                challenger_wins += result['challenger_wins']
+                challenger_losses += result['challenger_losses']
+                challenger_draws += result['challenger_draws']
+
+            print(f'Games: {game_cnt} {challenger_wins / game_cnt} Challenger wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
+            i += NUM_WORKERS
+            gc_list = gc.get_objects()
+
+        if (challenger_wins / game_cnt) > 0.55:
+            print(f'Challenger won {challenger_wins / game_cnt} of the games')
+            agent_admin.load_networks(key)
+            agent_admin.save_networks('network_current')
+        delete_redis_key(agent_admin, key)
+
     elif type_list[type_id] != 'initialize' and USE_RAY is True:
 
         max_num_iterations = 1600
