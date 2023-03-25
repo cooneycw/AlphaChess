@@ -2,6 +2,7 @@ import logging
 import ray
 import copy
 import chess
+import gc
 import datetime
 import numpy as np
 import tensorflow as tf
@@ -106,7 +107,8 @@ def play_games(pass_dict):
                     # Save the training data
                     save_training_data(agent, key_id, key_dict)
 
-
+        del agent
+        gc.collect()
 
 
 def train_model(key_prefix):
