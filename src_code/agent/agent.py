@@ -327,7 +327,7 @@ class MCTSTree:
     def process_mcts(self, node, config, first_expand):
         epsilon = 1e-8
         policy = []
-        if node.board.is_game_over():
+        if node.board.is_game_over(claim_draw=True):
             winner = node.board.result()
             node.game_over = True
             if winner == '1-0':
