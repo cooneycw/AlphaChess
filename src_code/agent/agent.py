@@ -419,11 +419,33 @@ class MCTSTree:
 
     def update_root(self, action):
         for child in self.root.children:
+            if child.name != action:
+                self.remove_node_and_descendants(child)
+        for child in self.root.children:
             if child.name == action:
                 self.root = child
                 self.root.parent = None
                 self.root.name = 'root'
-                break
+
+    def remove_node_and_descendants(self, node):
+        for child in node.children:
+            self.remove_node_and_descendants(child)
+            # remove the child node from the tree
+            if child in node.children:
+                node.children.remove(child)
+                # print(f"Removed child node {child.name} from parent node {node.name}")
+            else:
+                pass
+                # print(f"Child node {child.name} not found in parent node {node.name}")
+            del child
+        # remove the current node from the tree
+        if node.parent is not None and node in node.parent.children:
+            node.parent.children.remove(node)
+            # print(f"Removed node {node.name} from parent node {node.parent.name}")
+        else:
+            pass
+            # print(f"Node {node.name} not found in parent node {node.parent.name}")
+        del node
 
     def depth(self):
         print("Calculating depth...")
