@@ -33,6 +33,10 @@ def play_games(pass_dict):
             # print(f'Local variables: {print_variable_sizes_pympler(locals())}')
 
             # Take the action and update the board state
+            # print(uci_move)
+            # if player == 'black':
+            #     uci_move = input()
+
             agent.board.push_uci(uci_move)
 
             key_id = f'{key_prefix}_{game_id}_{agent.move_counter.count}'
