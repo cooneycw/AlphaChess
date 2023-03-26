@@ -500,3 +500,11 @@ class Node:
         self.parent = None
         self.game_over = False
         self.name = name
+
+    def count_nodes(self):
+        # Recursively traverse the tree and increment the counter for each node
+        count = 1  # Count the current node
+        for child in self.children:
+            count += child.count_nodes()
+        return count
+

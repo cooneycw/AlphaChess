@@ -2,11 +2,13 @@ import chess
 import chess.svg
 import cairosvg
 import io
+import sys
 import pickle
 import datetime
 import tkinter as tk
 import networkx as nx
 import matplotlib.pyplot as plt
+from pympler.asizeof import asizeof
 from PIL import Image, ImageTk
 
 
@@ -112,3 +114,24 @@ def scan_redis_for_training_data(agent, match):
     for key in keys:
         key_list.append(key.decode('utf-8'))
     return key_list
+
+
+def get_var_sizes(local_vars):
+    for var, obj in local_vars:
+        print(f'variable {var} size: {sys.getsizeof(obj)}')
+
+
+def shrink_df(df, name, verbose):
+    for i, column in enumerate(df.columns):
+        if df[column].dtype == 'int64':
+            df[column] = df[column].astype('int16')
+            if verbose == True:
+                print(f'Shrinking variable: {column}')
+                print(f'Completed shrinking dataframe: {name}')
+    return df
+
+
+def print_variable_sizes_pympler(namespace):
+    for name, value in namespace.items():
+        size = asizeof(value)
+        print(f"{name}: {size} bytes")

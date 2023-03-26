@@ -13,7 +13,8 @@ from src_code.agent.self_play import play_games
 from src_code.agent.train import train_model
 from src_code.evaluate.evaluate import run_evaluation
 from src_code.evaluate.utils import scan_redis_for_networks, delete_redis_key
-from src_code.agent.utils import draw_board, visualize_tree, get_board_piece_count, generate_game_id, save_training_data, load_training_data, scan_redis_for_training_data
+from src_code.agent.utils import draw_board, visualize_tree, get_board_piece_count, generate_game_id, \
+    save_training_data, load_training_data, scan_redis_for_training_data, get_var_sizes
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"

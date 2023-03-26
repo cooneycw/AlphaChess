@@ -1,8 +1,9 @@
 import gc
+from memory_profiler import profile
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess
 from src_code.agent.agent import board_to_input, draw_board
-from src_code.agent.utils import get_board_piece_count, save_training_data
+from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, print_variable_sizes_pympler
 
 
 def play_games(pass_dict):
@@ -27,6 +28,10 @@ def play_games(pass_dict):
             player = 'white' if agent.board.turn else 'black'
             uci_move, policy, policy_target = agent.get_action()
 
+            # agent.tree.root.count_nodes()
+            # print(f'Global variables: {print_variable_sizes_pympler(globals())}')
+            # print(f'Local variables: {print_variable_sizes_pympler(locals())}')
+
             # Take the action and update the board state
             agent.board.push_uci(uci_move)
 
@@ -49,6 +54,7 @@ def play_games(pass_dict):
 
             # Update the tree
             agent.tree.update_root(uci_move)
+            gc.collect()
             agent.move_counter.increment()
 
             # Print the result of the game
@@ -87,6 +93,6 @@ def play_games(pass_dict):
                     # Save the training data
                     save_training_data(agent, key_id, key_dict)
 
+        agent.tree.remove_node_and_descendants(agent.tree.root)
         del agent
-        gc_list = gc.get_objects()
         gc.collect()
