@@ -36,5 +36,10 @@ def train_model(key_prefix, num_train_records=1000):
     print(f'Sum of values: {np.sum(values)}  Win Absolute Ratio: {win_abs_ratio}  Win Ratio: {win_ratio}')
 
     agent.update_network(states, policy_targets, value_targets)
-    key_name = 'network_candidate_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    now = datetime.datetime.now()
+
+    # Format the datetime as separate columns for date and time
+    date_str = now.strftime("%Y-%m-%d")
+    time_str = now.strftime("%H:%M:%S")
+    key_name = 'network_candidate_' + date_str + '_' + time_str
     agent.save_networks(key_name)

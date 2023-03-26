@@ -67,7 +67,11 @@ def add_edges_to_graph(graph, node):
 
 def generate_game_id():
     now = datetime.datetime.now()
-    game_id = now.strftime('%Y%m%d%H%M%S')
+
+    # Format the datetime as separate columns for date and time
+    date_str = now.strftime("%Y-%m-%d")
+    time_str = now.strftime("%H:%M:%S")
+    game_id = date_str + '_' + time_str
     return game_id
 
 
