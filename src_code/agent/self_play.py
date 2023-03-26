@@ -21,9 +21,9 @@ def play_games(pass_dict):
         key_id_list = []
         states = []
         policy_targets = []
-
+        game_limit_stop = False
         # training loop:
-        while not agent.game_over():
+        while not agent.game_over() or game_limit_stop:
             # Get the current state of the board
             player = 'white' if agent.board.turn else 'black'
             uci_move, policy, policy_target = agent.get_action()
@@ -64,6 +64,8 @@ def play_games(pass_dict):
             # Print the result of the game
             if agent.game_over() or agent.move_counter.count > config.maximum_moves:
                 print(f'Game Over! Winner is {agent.board.result()}')
+                if agent.move_counter.count > config.maximum_moves:
+                    game_limit_stop = True
                 # add the value outcomes to the training data
                 value_target = None
 

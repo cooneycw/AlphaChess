@@ -88,7 +88,8 @@ if __name__ == '__main__':
         params['self_play_games'] = 1
         outcome = main(params)
         print(f'Outcome: {outcome}')
-    if type_list[type_id] == 'evaluate':
+
+    elif type_list[type_id] == 'evaluate':
         assert USE_RAY is True, 'USE_RAY must be True'
         config = Config(num_iterations=1600, verbosity=False)
         agent_admin = AlphaZeroChess(config)
