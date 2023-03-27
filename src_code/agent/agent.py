@@ -6,6 +6,7 @@ import random
 import pickle
 import numpy as np
 import tensorflow as tf
+from memory_profiler import profile
 from sklearn.model_selection import train_test_split
 from tensorflow import keras
 from src_code.agent.utils import draw_board
@@ -55,6 +56,7 @@ class AlphaZeroChess:
         self.tree = MCTSTree(self)
         self.move_counter = self.config.MoveCounter()
 
+    @profile
     def get_action(self, iters=None):
         if iters is None:
             iters = self.config.num_iterations
@@ -324,6 +326,7 @@ class MCTSTree:
 
         return policy, policy_uci, temp_adj_policy, policy_array
 
+    @profile
     def process_mcts(self, node, config, first_expand):
         epsilon = 1e-8
         policy = []

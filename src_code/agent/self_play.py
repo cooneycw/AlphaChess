@@ -5,7 +5,7 @@ from src_code.agent.agent import AlphaZeroChess
 from src_code.agent.agent import board_to_input, draw_board
 from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, print_variable_sizes_pympler
 
-
+@profile
 def play_games(pass_dict):
     game_id = pass_dict['game_id']
     key_prefix = pass_dict['key_prefix']
@@ -23,7 +23,7 @@ def play_games(pass_dict):
         policy_targets = []
         game_limit_stop = False
         # training loop:
-        while not agent.game_over() or game_limit_stop:
+        while not agent.game_over() and not game_limit_stop:
             # Get the current state of the board
             player = 'white' if agent.board.turn else 'black'
             uci_move, policy, policy_target = agent.get_action()
