@@ -1,5 +1,4 @@
 import gc
-from memory_profiler import profile
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess
 from src_code.agent.agent import board_to_input, draw_board

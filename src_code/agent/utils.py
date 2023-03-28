@@ -6,9 +6,7 @@ import sys
 import pickle
 import datetime
 import tkinter as tk
-import networkx as nx
 import matplotlib.pyplot as plt
-from pympler.asizeof import asizeof
 from PIL import Image, ImageTk
 
 

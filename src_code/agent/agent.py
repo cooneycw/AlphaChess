@@ -4,10 +4,8 @@ import math
 import copy
 import random
 import pickle
-import objgraph
 import numpy as np
 import tensorflow as tf
-from memory_profiler import profile
 from sklearn.model_selection import train_test_split
 from tensorflow import keras
 from src_code.agent.utils import draw_board
