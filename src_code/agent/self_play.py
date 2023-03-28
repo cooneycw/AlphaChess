@@ -5,7 +5,7 @@ from src_code.agent.agent import AlphaZeroChess
 from src_code.agent.agent import board_to_input, draw_board
 from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, print_variable_sizes_pympler
 
-@profile
+
 def play_games(pass_dict):
     game_id = pass_dict['game_id']
     key_prefix = pass_dict['key_prefix']

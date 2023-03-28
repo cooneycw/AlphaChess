@@ -33,38 +33,6 @@ def draw_board(board, display=True, verbosity=False):
     return
 
 
-def visualize_tree(tree):
-    # Create a new graph
-    graph = nx.DiGraph()
-
-    # Add nodes to the graph
-    add_node_to_graph(graph, tree.root)
-
-    # Add edges to the graph
-    add_edges_to_graph(graph, tree.root)
-
-    # Draw the graph
-    pos = nx.spring_layout(graph, seed=42)
-    nx.draw_networkx(graph, pos)
-
-    # Show the graph
-    plt.show()
-
-
-def add_node_to_graph(graph, node):
-    # Add the node to the graph
-    graph.add_node(node.name, label=node.name)
-
-
-def add_edges_to_graph(graph, node):
-    # Add edges from the node to its children
-    for child in node.children:
-        graph.add_edge(node.name, child.name)
-
-        # Recursively add edges for the child's children
-        add_edges_to_graph(graph, child)
-
-
 def generate_game_id():
     now = datetime.datetime.now()
 

@@ -4,6 +4,7 @@ import math
 import copy
 import random
 import pickle
+import objgraph
 import numpy as np
 import tensorflow as tf
 from memory_profiler import profile
@@ -16,7 +17,7 @@ from src_code.agent.network import create_network
 class AlphaZeroChess:
     def __init__(self, config, network=None):
         self.config = config
-        self.board = chess.Board()
+        # self.board = chess.Board()
         # self.board = chess.Board(None)
         # # Place the black king at b8 (index 17)
         # self.board.set_piece_at(18, chess.Piece(chess.KING, chess.BLACK))
@@ -56,7 +57,6 @@ class AlphaZeroChess:
         self.tree = MCTSTree(self)
         self.move_counter = self.config.MoveCounter()
 
-    @profile
     def get_action(self, iters=None):
         if iters is None:
             iters = self.config.num_iterations
@@ -326,23 +326,10 @@ class MCTSTree:
 
         return policy, policy_uci, temp_adj_policy, policy_array
 
-    @profile
     def process_mcts(self, node, config, first_expand):
         epsilon = 1e-8
         policy = []
-        if node.board.is_game_over(claim_draw=True):
-            winner = node.board.result()
-            node.game_over = True
-            if winner == '1-0':
-                node.prior_value = 1
-            elif winner == '0-1':
-                node.prior_value = -1
-            elif winner == '1/2-1/2':
-                if node.parent.player_to_move == 'black':
-                    node.prior_value = -0.25
-                elif node.parent.player_to_move == 'white':
-                    node.prior_value = 0.25
-
+        if node.game_over:
             return policy
         # Select a node to expand
         if len(node.children) == 0:
@@ -351,21 +338,20 @@ class MCTSTree:
 
         # Evaluate the node
         max_uct = -float('inf')
-        min_uct = float('inf')
         best_node = None
 
+        adj = 1
+        if node.player_to_move == 'black':
+            adj = -1
+
         for child in node.children:
-            uct = child.Qreward + self.config.c_puct * child.prior_prob * math.sqrt(
+            uct = (adj * child.Qreward) + self.config.c_puct * child.prior_prob * math.sqrt(
                 node.Nvisit + epsilon) / (1 + child.Nvisit)
             policy.append(child.prior_prob)
-            if node.player_to_move == 'white':
-                if uct > max_uct:
-                    max_uct = uct
-                    best_node = child
-            elif node.player_to_move == 'black':
-                if uct < min_uct:
-                    min_uct = uct
-                    best_node = child
+
+            if uct > max_uct:
+                max_uct = uct
+                best_node = child
 
         # Simulate a game from the best_node
         _ = self.process_mcts(best_node, config, first_expand)
@@ -415,6 +401,19 @@ class MCTSTree:
                 player_to_move = 'white'
             child = Node(new_board, name=action, player_to_move=player_to_move)
             child.parent = leaf_node
+            if child.board.is_game_over(claim_draw=True):
+                winner = child.board.result()
+                child.game_over = True
+                if winner == '1-0':
+                    child.prior_value = 1
+                elif winner == '0-1':
+                    child.prior_value = -1
+                elif winner == '1/2-1/2':
+                    if child.parent.player_to_move == 'black':
+                        child.prior_value = -0.25
+                    elif child.parent.player_to_move == 'white':
+                        child.prior_value = 0.25
+
             child.prior_prob = legal_probabilities[i]
             leaf_node.children.append(child)
 
@@ -424,12 +423,14 @@ class MCTSTree:
         for child in self.root.children:
             if child.name != action:
                 self.remove_node_and_descendants(child)
+                child = None
         for child in self.root.children:
             if child.name == action:
                 del_nxt = self.root
                 self.root = child
                 self.root.parent = None
                 self.root.name = 'root'
+                del_nxt = None
                 del del_nxt
 
     def remove_node_and_descendants(self, node):
@@ -438,6 +439,7 @@ class MCTSTree:
             # remove the child node from the tree
             if child in node.children:
                 node.children.remove(child)
+                child = None
                 # print(f"Removed child node {child.name} from parent node {node.name}")
             else:
                 pass
@@ -446,6 +448,7 @@ class MCTSTree:
         # remove the current node from the tree
         if node.parent is not None and node in node.parent.children:
             node.parent.children.remove(node)
+            node = None
             # print(f"Removed node {node.name} from parent node {node.parent.name}")
         else:
             pass

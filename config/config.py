@@ -17,7 +17,7 @@ class Config:
         self.num_epochs = 20
         self.validation_split = 0.2
         self.batch_size = 32
-        self.maximum_moves = 6
+        self.maximum_moves = 150
         self.temperature = 1
         self.min_temperature = 0.01
         self.temperature_threshold = 150
