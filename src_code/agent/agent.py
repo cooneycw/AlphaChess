@@ -17,16 +17,16 @@ from src_code.agent.network import create_network
 class AlphaZeroChess:
     def __init__(self, config, network=None):
         self.config = config
-        # self.board = chess.Board()
-        self.board = chess.Board(None)
+        self.board = chess.Board()
+        # self.board = chess.Board(None)
         # # Place the black king at b8 (index 17)
-        self.board.set_piece_at(32, chess.Piece(chess.KING, chess.BLACK))
+        # self.board.set_piece_at(32, chess.Piece(chess.KING, chess.BLACK))
         #
         # # Place the white king at c6 (index 34)
-        self.board.set_piece_at(0, chess.Piece(chess.KING, chess.WHITE))
+        # self.board.set_piece_at(0, chess.Piece(chess.KING, chess.WHITE))
         #
         # # Place the white pawn at a2
-        self.board.set_piece_at(24, chess.Piece(chess.QUEEN, chess.BLACK))
+        # self.board.set_piece_at(24, chess.Piece(chess.QUEEN, chess.BLACK))
 
         self.num_channels = 17
         self.num_moves = 64 * 64
