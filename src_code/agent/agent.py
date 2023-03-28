@@ -18,15 +18,15 @@ class AlphaZeroChess:
     def __init__(self, config, network=None):
         self.config = config
         # self.board = chess.Board()
-        # self.board = chess.Board(None)
+        self.board = chess.Board(None)
         # # Place the black king at b8 (index 17)
-        # self.board.set_piece_at(18, chess.Piece(chess.KING, chess.BLACK))
+        self.board.set_piece_at(32, chess.Piece(chess.KING, chess.BLACK))
         #
         # # Place the white king at c6 (index 34)
-        # self.board.set_piece_at(1, chess.Piece(chess.KING, chess.WHITE))
+        self.board.set_piece_at(0, chess.Piece(chess.KING, chess.WHITE))
         #
         # # Place the white pawn at a2
-        # self.board.set_piece_at(8, chess.Piece(chess.PAWN, chess.BLACK))
+        self.board.set_piece_at(24, chess.Piece(chess.QUEEN, chess.BLACK))
 
         self.num_channels = 17
         self.num_moves = 64 * 64
@@ -368,7 +368,7 @@ class MCTSTree:
         # Get the policy and value from the neural network
         state = board_to_input(self.config, leaf_node.board)
         pi, v = self.network.predict(np.expand_dims(state, axis=0), verbose=0)
-        leaf_node.prior_value = -1 * v[0][0]
+        leaf_node.prior_value = v[0][0]
 
         # Add Dirichlet noise to the prior probabilities
         if first_expand:
