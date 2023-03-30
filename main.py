@@ -129,8 +129,11 @@ if __name__ == '__main__':
 
         if (challenger_wins / game_cnt) > 0.55:
             print(f'Challenger won {challenger_wins / game_cnt} of the games')
+            agent_admin.load_networks('network_current')
+            agent_admin.save_networks('network_previous')
             agent_admin.load_networks(key)
             agent_admin.save_networks('network_current')
+            agent_admin.save_networks('network_backup')
         delete_redis_key(agent_admin, key)
 
     elif type_list[type_id] != 'initialize' and USE_RAY is True:
