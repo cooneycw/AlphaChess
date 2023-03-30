@@ -14,7 +14,7 @@ class Config:
         self.redis_port = 6379
         self.redis_db = 0
         # Training settings
-        self.num_epochs = 20
+        self.num_epochs = 30
         self.validation_split = 0.2
         self.batch_size = 32
         self.maximum_moves = 150
@@ -25,7 +25,7 @@ class Config:
         self.momentum = 0.9
         self.weight_decay = 1e-4
         self.num_iterations = num_iterations
-        self.num_evaluation_games = 400
+        self.num_evaluation_games = 100
         self.reward_discount = 0.99
         self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.03  # Starting value for alpha

@@ -11,6 +11,8 @@ def train_model(key_prefix, num_train_records=1000):
     config = Config(num_iterations=None, verbosity=False)
     agent = AlphaZeroChess(config)
 
+    agent.load_networks('network_current')
+    # Get a list of keys and shuffle them
     key_list = scan_redis_for_training_data(agent, key_prefix[0:7])
     shuffled_key_list = random.sample(list(key_list), len(list(key_list)))
     selected_keys = itertools.islice(shuffled_key_list, num_train_records)
