@@ -516,7 +516,7 @@ def policy_to_prob_array(policy, legal_moves, all_moves_list):
 
 class Node:
     def __init__(self, board, player_to_move='white', name='root'):
-        self.board = copy.deepcopy(board)
+        self.board = board.copy()
         self.Qreward = 0
         self.Nvisit = 0
         self.prior_prob = 0
