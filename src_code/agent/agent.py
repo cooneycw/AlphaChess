@@ -410,48 +410,11 @@ class MCTSTree:
 
     def update_root(self, action):
         for child in self.root.children:
-            if child.name != action:
-                self.remove_node_and_descendants(child)
-                child = None
-        for child in self.root.children:
             if child.name == action:
-                old_root = self.root
                 self.root = child
                 self.root.parent = None
                 self.root.name = 'root'
-                self.remove_node_and_descendants(old_root)  # Ensure all child nodes are deleted
-                old_root = None
-                del old_root
-
-    # def update_root(self, action):
-    #     for child in self.root.children:
-    #         if child.name != action:
-    #             self.remove_node_and_descendants(child)
-    #             child = None
-    #     for child in self.root.children:
-    #         if child.name == action:
-    #             del_nxt = self.root
-    #             self.root = child
-    #             self.root.parent = None
-    #             self.root.name = 'root'
-    #             del_nxt = None
-    #             del del_nxt
-
-    def remove_node_and_descendants(self, node):
-        for child in node.children:
-            self.remove_node_and_descendants(child)
-            # remove the child node from the tree
-            if child in node.children:
-                node.children.remove(child)
-                child = None
-            else:
-                pass
-        # remove the current node from the tree
-        if node.parent is not None and node in node.parent.children:
-            node.parent.children.remove(node)
-            node = None
-        else:
-            pass
+                break
 
     # def remove_node_and_descendants(self, node):
     #     for child in node.children:
@@ -515,6 +478,8 @@ def policy_to_prob_array(policy, legal_moves, all_moves_list):
 
 
 class Node:
+    all_nodes = set()
+
     def __init__(self, board, player_to_move='white', name='root'):
         self.board = board.copy()
         self.Qreward = 0
@@ -526,11 +491,21 @@ class Node:
         self.parent = None
         self.game_over = False
         self.name = name
+        Node.all_nodes.add(self)
+
+    def remove_from_all_nodes(self):
+        Node.all_nodes.discard(self)
+
+    def get_all_nodes(self):
+        all_nodes = [self]
+        for child in self.children:
+            all_nodes += child.get_all_nodes()
+        return all_nodes
 
     def count_nodes(self):
         # Recursively traverse the tree and increment the counter for each node
         count = 1  # Count the current node
         for child in self.children:
-            count += child.count_nodes()
-        return count
+            count += child.count_nodes()[0]
+        return count, len(Node.all_nodes)
 

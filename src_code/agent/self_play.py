@@ -56,7 +56,17 @@ def play_games(pass_dict):
             policy_targets.append(policy_target)
 
             # Update the tree
+            old_node_list = agent.tree.root.get_all_nodes()
             agent.tree.update_root(uci_move)
+            new_node_list = agent.tree.root.get_all_nodes()
+            agent.tree.root.count_nodes()
+
+            for abandoned_node in set(old_node_list).difference(set(new_node_list)):
+                abandoned_node.remove_from_all_nodes()
+                del abandoned_node
+
+            del old_node_list, new_node_list
+
             gc.collect()
             agent.move_counter.increment()
 

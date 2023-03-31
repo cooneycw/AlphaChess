@@ -40,10 +40,27 @@ def run_evaluation(game_id, key):
         if move_cnt > 20:
             agent_current.update_temperature()
             agent_candidate.update_temperature()
+        old_node_list_current = agent_current.tree.root.get_all_nodes()
+        old_node_list_candidate = agent_candidate.tree.root.get_all_nodes()
         agent_current.board.push_uci(uci_move)
         agent_candidate.board.push_uci(uci_move)
         agent_current.tree.update_root(uci_move)
         agent_candidate.tree.update_root(uci_move)
+
+        new_node_list_current = agent_current.tree.root.get_all_nodes()
+        new_node_list_candidate = agent_candidate.tree.root.get_all_nodes()
+
+        # Update the tree
+        for abandoned_node_current in set(old_node_list_current).difference(set(new_node_list_current)):
+            abandoned_node_current.remove_from_all_nodes()
+            del abandoned_node_current
+
+        for abandoned_node_candidate in set(old_node_list_candidate).difference(set(new_node_list_candidate)):
+            abandoned_node_candidate.remove_from_all_nodes()
+            del abandoned_node_candidate
+
+        del old_node_list_current, new_node_list_current, old_node_list_candidate, new_node_list_candidate
+
         result = board.result()
         print(f'The {move_cnt} move was: {uci_move}')
         print(f'Piece count (white / black): {get_board_piece_count(board)} White: {starting_player}')
