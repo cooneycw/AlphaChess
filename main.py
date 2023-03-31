@@ -72,7 +72,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
-    type_id = 2
+    type_id = 1
 
     min_iterations = 1200
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
@@ -119,16 +119,17 @@ if __name__ == '__main__':
 
             for result in results:
                 game_cnt += 1
+                i += 1
                 challenger_wins += result['challenger_wins']
                 challenger_losses += result['challenger_losses']
                 challenger_draws += result['challenger_draws']
 
-            print(f'Games: {game_cnt} {challenger_wins / game_cnt} Challenger wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
-            i += NUM_WORKERS
+            print(f'Games: {game_cnt} Win/draw ratio: {0.1 * (int(0.5 + 1000 * challenger_wins / game_cnt))}% '
+                  f'Challenger wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
             gc_list = gc.get_objects()
 
-        if (challenger_wins / game_cnt) > 0.55:
-            print(f'Challenger won {challenger_wins / game_cnt} of the games')
+        if ((challenger_wins + challenger_draws) / game_cnt) >= 0.55:
+            print(f'Challenger won {0.1 * (int(0.5 + 1000 * challenger_wins / game_cnt))}% of the games')
             agent_admin.load_networks('network_current')
             agent_admin.save_networks('network_previous')
             agent_admin.load_networks(key)
