@@ -164,6 +164,4 @@ if __name__ == '__main__':
             # Print the output of each task
             for i, result in enumerate(output):
                 print(f'Task {i} output: {result}')
-
-            start_ind += NUM_WORKERS
-
+                start_ind += 1

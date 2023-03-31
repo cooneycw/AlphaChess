@@ -98,6 +98,6 @@ def play_games(pass_dict):
                     # Save the training data
                     save_training_data(agent, key_id, key_dict)
 
-        agent.tree.remove_node_and_descendants(agent.tree.root)
-        del agent
+        agent.tree = None
+        agent = None
         gc.collect()
