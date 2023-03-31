@@ -7,7 +7,7 @@ from src_code.agent.agent import AlphaZeroChess
 from src_code.agent.utils import scan_redis_for_training_data, load_training_data
 
 
-def train_model(key_prefix, num_train_records=1000):
+def train_model(key_prefix, num_train_records=2000):
     config = Config(num_iterations=None, verbosity=False)
     agent = AlphaZeroChess(config)
 

@@ -251,16 +251,6 @@ def board_to_input(config, board):
     return input_tensor
 
 
-def make_move(board, uci_move, config):
-    """
-    Apply the given action to the given board and return the resulting board.
-    """
-    new_board = copy.deepcopy(board)
-    new_board.push_uci(uci_move)
-    new_state = board_to_input(config, new_board)
-    return new_board, new_state
-
-
 def get_legal_moves(board):
     """
     Return a list of all legal moves for the current player on the given board.
@@ -392,7 +382,8 @@ class MCTSTree:
         legal_probabilities /= (np.sum(legal_probabilities) + epsilon)
 
         for i, action in enumerate(legal_moves):
-            new_board, new_state = make_move(copy.deepcopy(leaf_node.board), action, self.config)
+            new_board = leaf_node.board.copy()
+            new_board.push_uci(action)
             if leaf_node.player_to_move == 'white':
                 player_to_move = 'black'
             else:
@@ -424,12 +415,27 @@ class MCTSTree:
                 child = None
         for child in self.root.children:
             if child.name == action:
-                del_nxt = self.root
+                old_root = self.root
                 self.root = child
                 self.root.parent = None
                 self.root.name = 'root'
-                del_nxt = None
-                del del_nxt
+                self.remove_node_and_descendants(old_root)  # Ensure all child nodes are deleted
+                old_root = None
+                del old_root
+
+    # def update_root(self, action):
+    #     for child in self.root.children:
+    #         if child.name != action:
+    #             self.remove_node_and_descendants(child)
+    #             child = None
+    #     for child in self.root.children:
+    #         if child.name == action:
+    #             del_nxt = self.root
+    #             self.root = child
+    #             self.root.parent = None
+    #             self.root.name = 'root'
+    #             del_nxt = None
+    #             del del_nxt
 
     def remove_node_and_descendants(self, node):
         for child in node.children:
@@ -438,20 +444,36 @@ class MCTSTree:
             if child in node.children:
                 node.children.remove(child)
                 child = None
-                # print(f"Removed child node {child.name} from parent node {node.name}")
             else:
                 pass
-                # print(f"Child node {child.name} not found in parent node {node.name}")
-            del child
         # remove the current node from the tree
         if node.parent is not None and node in node.parent.children:
             node.parent.children.remove(node)
             node = None
-            # print(f"Removed node {node.name} from parent node {node.parent.name}")
         else:
             pass
-            # print(f"Node {node.name} not found in parent node {node.parent.name}")
-        del node
+
+    # def remove_node_and_descendants(self, node):
+    #     for child in node.children:
+    #         self.remove_node_and_descendants(child)
+    #         # remove the child node from the tree
+    #         if child in node.children:
+    #             node.children.remove(child)
+    #             child = None
+    #             # print(f"Removed child node {child.name} from parent node {node.name}")
+    #         else:
+    #             pass
+    #             # print(f"Child node {child.name} not found in parent node {node.name}")
+    #         del child
+    #     # remove the current node from the tree
+    #     if node.parent is not None and node in node.parent.children:
+    #         node.parent.children.remove(node)
+    #         node = None
+    #         # print(f"Removed node {node.name} from parent node {node.parent.name}")
+    #     else:
+    #         pass
+    #         # print(f"Node {node.name} not found in parent node {node.parent.name}")
+    #     del node
 
     def depth(self):
         print("Calculating depth...")
