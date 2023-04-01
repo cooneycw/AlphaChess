@@ -15,6 +15,7 @@ class Config:
         self.redis_db = 0
         # Training settings
         self.num_epochs = 32
+        self.max_nodes = 1000000
         self.validation_split = 0.2
         self.batch_size = 32
         self.maximum_moves = 150

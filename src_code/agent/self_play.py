@@ -1,8 +1,12 @@
 import gc
+import inspect
+import sys
+from chess import Board
 from config.config import Config
-from src_code.agent.agent import AlphaZeroChess
+from src_code.agent.agent import AlphaZeroChess, Node
 from src_code.agent.agent import board_to_input, draw_board
-from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, print_variable_sizes_pympler, get_size
+from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, \
+    print_variable_sizes_pympler, print_uncollected_objects
 
 
 def play_games(pass_dict):
@@ -51,24 +55,27 @@ def play_games(pass_dict):
                 # if (agent.move_counter.count % 50) == 0:
                 #    draw_board(agent.board, display=True, verbosity=True)
             # Append the training data
-            state = board_to_input(config, agent.board)
+            state = board_to_input(config, agent.board.copy())
             states.append(state)
             policy_targets.append(policy_target)
 
-            # Update the tree
-            old_node_list = agent.tree.root.get_all_nodes()
-            agent.tree.update_root(uci_move)
-            new_node_list = agent.tree.root.get_all_nodes()
-            agent.tree.root.count_nodes()
-
-            for abandoned_node in set(old_node_list).difference(set(new_node_list)):
-                abandoned_node.remove_from_all_nodes()
-                del abandoned_node
-
-            del old_node_list, new_node_list
-
-            gc.collect()
+            old_used_nodes = agent.tree.get_list_of_all_used_nodes()
+            agent.update_root(uci_move)
             agent.move_counter.increment()
+
+            # delete unused nodes
+            new_used_nodes = agent.tree.get_list_of_all_used_nodes()
+            print(f'Old used nodes: {len(old_used_nodes)}')
+            print(f'New used nodes: {len(new_used_nodes)}')
+            nodes_to_delete = [node for node in old_used_nodes if node not in new_used_nodes]
+            cnt = 0
+            for node in nodes_to_delete:
+                agent.tree.delete_node(node)
+                cnt += 1
+
+            print(f'Deleted {cnt} nodes')
+            del nodes_to_delete, old_used_nodes, new_used_nodes
+            gc.collect()
 
             # Print the result of the game
             if agent.game_over() or agent.move_counter.count > config.maximum_moves:

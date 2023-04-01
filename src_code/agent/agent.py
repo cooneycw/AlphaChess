@@ -2,6 +2,7 @@ import chess
 import redis
 import math
 import copy
+import gc
 import weakref
 import random
 import pickle
@@ -90,6 +91,15 @@ class AlphaZeroChess:
 
     def game_over(self):
         return self.board.is_game_over(claim_draw=True)
+
+    def update_root(self, uci_move):
+        for child in self.tree.root.children:
+            if child.name == uci_move:
+                self.tree.delete_node(self.tree.root)
+                self.tree.root = child
+                self.tree.root.parent = None
+                self.tree.root.name = 'root'
+                break
 
     def get_result(self):
         # Check if the game is over
@@ -249,6 +259,8 @@ def board_to_input(config, board):
     remaining_halfmoves = 100 - board.halfmove_clock
     input_tensor[:, :, 16] = remaining_halfmoves / 100.0
 
+    del board
+
     return input_tensor
 
 
@@ -271,9 +283,46 @@ def move_to_index(move):
 class MCTSTree:
     # https://towardsdatascience.com/monte-carlo-tree-search-an-introduction-503d8c04e168
     def __init__(self, az):
-        self.root = Node(az.board)
+        node_list = self.create_nodes(az)
+        self.root = node_list[0]
         self.network = az.network
         self.config = az.config
+        self.unused_nodes = node_list[1:self.config.max_nodes]
+
+    @staticmethod
+    def create_nodes(az):
+        all_nodes = list()
+        for i in range(az.config.max_nodes):
+            all_nodes.append(Node(az.board.copy(), player_to_move=None, name='unused'))
+        all_nodes[0].name = 'root'
+        all_nodes[0].player_to_move = 'white'
+        return all_nodes
+
+    def add_child_node(self, parent, board, player_to_move, name):
+        if len(self.unused_nodes) == 0:
+            raise Exception('No more nodes available: expand config.max_nodes')
+        node = self.unused_nodes.pop()
+        node.parent = parent
+        node.board = board
+        node.player_to_move = player_to_move
+        node.name = name
+        node.parent.children.append(node)
+        return node
+
+    def delete_node(self, node):
+        if node.parent is not None:
+            if len(node.parent.children) > 0:
+                node.parent.children.remove(node)
+        node.reset_node()
+        self.unused_nodes.append(node)
+
+    def get_list_of_all_used_nodes(self):
+        all_nodes = list()
+        all_nodes.append(self.root)
+        for node in all_nodes:
+            for child in node.children:
+                all_nodes.append(child)
+        return all_nodes
 
     def get_policy_white(self, agent):
         # Get the policy from the root node
@@ -351,12 +400,14 @@ class MCTSTree:
         best_node.Nvisit += 1
 
         node.Nvisit += 1
+        del best_node, child
         return policy
 
     def expand(self, leaf_node, first_expand):
         # Get the policy and value from the neural network
-        state = board_to_input(self.config, leaf_node.board)
+        state = board_to_input(self.config, leaf_node.board.copy())
         pi, v = self.network.predict(np.expand_dims(state, axis=0), verbose=0)
+        del state
         leaf_node.prior_value = v[0][0]
 
         # Add Dirichlet noise to the prior probabilities
@@ -373,10 +424,7 @@ class MCTSTree:
         legal_moves = get_legal_moves(leaf_node.board)
 
         # Create list of legal policy probabilities corresponding to legal moves
-        try:
-            legal_probabilities = [pi[self.config.all_chess_moves.index(move)] for move in legal_moves]
-        except:
-            cwc = 0
+        legal_probabilities = [pi[self.config.all_chess_moves.index(move)] for move in legal_moves]
 
         # Normalize the legal probabilities to sum to 1
         epsilon = 1e-8
@@ -389,8 +437,8 @@ class MCTSTree:
                 player_to_move = 'black'
             else:
                 player_to_move = 'white'
-            child = Node(new_board, name=action, player_to_move=player_to_move)
-            child.set_parent(leaf_node)
+            child = self.add_child_node(parent=leaf_node, board=new_board, name=action, player_to_move=player_to_move)
+
             if child.board.is_game_over(claim_draw=True):
                 winner = child.board.result()
                 child.game_over = True
@@ -405,17 +453,9 @@ class MCTSTree:
                         child.prior_value = 0.25
 
             child.prior_prob = legal_probabilities[i]
-            leaf_node.children.append(child)
 
+        del legal_moves
         return legal_probabilities, first_expand
-
-    def update_root(self, action):
-        for child in self.root.children:
-            if child.name == action:
-                self.root = child
-                self.root.parent = None
-                self.root.name = 'root'
-                break
 
     # def remove_node_and_descendants(self, node):
     #     for child in node.children:
@@ -479,10 +519,8 @@ def policy_to_prob_array(policy, legal_moves, all_moves_list):
 
 
 class Node:
-    all_nodes = set()
-
-    def __init__(self, board, player_to_move='white', name='root'):
-        self.board = board.copy()
+    def __init__(self, board=None, player_to_move='white', name='root'):
+        self.board = board
         self.Qreward = 0
         self.Nvisit = 0
         self.prior_prob = 0
@@ -492,16 +530,32 @@ class Node:
         self.parent = None
         self.game_over = False
         self.name = name
-        Node.all_nodes.add(self)
+
+    def reset_node(self):
+        self.name = 'unused'
+        self.board = None
+        self.Qreward = 0
+        self.Nvisit = 0
+        self.prior_prob = 0
+        self.prior_value = 0
+        self.children = []
+        if self.parent is not None:
+            self.parent = None
+        self.game_over = False
 
     def set_parent(self, parent):
         self.parent = weakref.ref(parent)
 
     def remove_from_all_nodes(self):
+        for child in self.children:
+            child.remove_from_all_nodes()
+        if isinstance(self.board, chess.Board):
+            del self.board
         Node.all_nodes.discard(self)
+        del self
 
     def get_all_nodes(self):
-        all_nodes = [self]
+        all_nodes = [weakref.ref(self)]
         for child in self.children:
             all_nodes += child.get_all_nodes()
         return all_nodes

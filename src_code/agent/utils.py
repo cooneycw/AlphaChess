@@ -128,3 +128,9 @@ def get_size(referrers):
             variable_type = type(referrer)
             print(f"Object: {referrer}\nVariable name: {variable_name}\nType: {variable_type}\nSize: {size} bytes\n")
 
+
+def print_uncollected_objects():
+    gc.collect()
+    uncollected_objects = gc.get_objects()
+
+    return uncollected_objects
