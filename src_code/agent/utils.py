@@ -2,12 +2,15 @@ import chess
 import chess.svg
 import cairosvg
 import io
+import gc
+import inspect
 import sys
 import pickle
 import datetime
 import tkinter as tk
 import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
+from pympler import asizeof
 
 
 def draw_board(board, display=True, verbosity=False):
@@ -105,3 +108,23 @@ def print_variable_sizes_pympler(namespace):
     for name, value in namespace.items():
         size = asizeof(value)
         print(f"{name}: {size} bytes")
+
+
+def find_variable_name(obj):
+    frame = inspect.currentframe()
+    for frame_info in inspect.getouterframes(frame):
+        frame = frame_info[0]
+        for name, value in frame.f_locals.items():
+            if value is obj:
+                return name
+    return None
+
+
+def get_size(referrers):
+    for referrer in referrers:
+        variable_name = find_variable_name(referrer)
+        if variable_name:
+            size = sys.getsizeof(referrer)
+            variable_type = type(referrer)
+            print(f"Object: {referrer}\nVariable name: {variable_name}\nType: {variable_type}\nSize: {size} bytes\n")
+

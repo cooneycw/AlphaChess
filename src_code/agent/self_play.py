@@ -2,7 +2,7 @@ import gc
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess
 from src_code.agent.agent import board_to_input, draw_board
-from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, print_variable_sizes_pympler
+from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, print_variable_sizes_pympler, get_size
 
 
 def play_games(pass_dict):

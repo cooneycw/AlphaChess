@@ -2,6 +2,7 @@ import chess
 import redis
 import math
 import copy
+import weakref
 import random
 import pickle
 import numpy as np
@@ -389,7 +390,7 @@ class MCTSTree:
             else:
                 player_to_move = 'white'
             child = Node(new_board, name=action, player_to_move=player_to_move)
-            child.parent = leaf_node
+            child.set_parent(leaf_node)
             if child.board.is_game_over(claim_draw=True):
                 winner = child.board.result()
                 child.game_over = True
@@ -492,6 +493,9 @@ class Node:
         self.game_over = False
         self.name = name
         Node.all_nodes.add(self)
+
+    def set_parent(self, parent):
+        self.parent = weakref.ref(parent)
 
     def remove_from_all_nodes(self):
         Node.all_nodes.discard(self)
