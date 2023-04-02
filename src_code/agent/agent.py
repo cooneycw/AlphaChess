@@ -64,7 +64,7 @@ class AlphaZeroChess:
         """Uses dirichlet noise to encourage exploration in place of temperature."""
         while self.sim_counter.get_count() < iters:
             first_expand = True
-            _ = self.tree.process_mcts(self.tree.root, self.config, first_expand)
+            _ = self.tree.process_mcts(self.tree.root, self.config, self.network, first_expand)
             self.sim_counter.increment()
             if self.sim_counter.get_count() % int(0.5 + 0.5*self.config.num_iterations) == 0:
                 print(f'Game Number: {self.config.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
@@ -249,6 +249,8 @@ def board_to_input(config, board):
     remaining_halfmoves = 100 - board.halfmove_clock
     input_tensor[:, :, 16] = remaining_halfmoves / 100.0
 
+    del board
+
     return input_tensor
 
 
@@ -257,6 +259,7 @@ def get_legal_moves(board):
     Return a list of all legal moves for the current player on the given board.
     """
     legal_moves = list(board.legal_moves)
+    del board
     return [move.uci() for move in legal_moves]
 
 
@@ -271,8 +274,7 @@ def move_to_index(move):
 class MCTSTree:
     # https://towardsdatascience.com/monte-carlo-tree-search-an-introduction-503d8c04e168
     def __init__(self, az):
-        self.root = Node(az.board)
-        self.network = az.network
+        self.root = Node(az.board.copy())
         self.config = az.config
 
     def get_policy_white(self, agent):
@@ -315,14 +317,14 @@ class MCTSTree:
 
         return policy, policy_uci, temp_adj_policy, policy_array
 
-    def process_mcts(self, node, config, first_expand):
+    def process_mcts(self, node, config, network, first_expand):
         epsilon = 1e-8
         policy = []
         if node.game_over:
             return policy
         # Select a node to expand
         if len(node.children) == 0:
-            policy, first_expand = self.expand(node, first_expand)
+            policy, first_expand = self.expand(node, network, first_expand)
             return policy
 
         # Evaluate the node
@@ -343,7 +345,7 @@ class MCTSTree:
                 best_node = child
 
         # Simulate a game from the best_node
-        _ = self.process_mcts(best_node, config, first_expand)
+        _ = self.process_mcts(best_node, config, network, first_expand)
 
         # Backpropagate the results of the simulation
 
@@ -353,11 +355,12 @@ class MCTSTree:
         node.Nvisit += 1
         return policy
 
-    def expand(self, leaf_node, first_expand):
+    def expand(self, leaf_node, network, first_expand):
         # Get the policy and value from the neural network
-        state = board_to_input(self.config, leaf_node.board)
-        pi, v = self.network.predict(np.expand_dims(state, axis=0), verbose=0)
+        state = board_to_input(self.config, leaf_node.board.copy())
+        pi, v = network.predict(np.expand_dims(state, axis=0), verbose=0)
         leaf_node.prior_value = v[0][0]
+        del v
 
         # Add Dirichlet noise to the prior probabilities
         if first_expand:
@@ -373,10 +376,9 @@ class MCTSTree:
         legal_moves = get_legal_moves(leaf_node.board)
 
         # Create list of legal policy probabilities corresponding to legal moves
-        try:
-            legal_probabilities = [pi[self.config.all_chess_moves.index(move)] for move in legal_moves]
-        except:
-            cwc = 0
+        legal_probabilities = [pi[self.config.all_chess_moves.index(move)] for move in legal_moves]
+
+        del pi
 
         # Normalize the legal probabilities to sum to 1
         epsilon = 1e-8
@@ -498,6 +500,16 @@ class Node:
         self.parent = weakref.ref(parent)
 
     def remove_from_all_nodes(self):
+        del self.board
+        del self.children
+        del self.parent
+        del self.game_over
+        del self.Qreward
+        del self.Nvisit
+        del self.prior_prob
+        del self.prior_value
+        del self.name
+        del self.player_to_move
         Node.all_nodes.discard(self)
 
     def get_all_nodes(self):
@@ -513,3 +525,12 @@ class Node:
             count += child.count_nodes()[0]
         return count, len(Node.all_nodes)
 
+    def count_lists(self):
+        count = 0
+        for attr_name in dir(self):
+            attr = getattr(self, attr_name)
+            if isinstance(attr, list):
+                count += 1
+        for child in self.children:
+            count += child.count_lists()
+        return count

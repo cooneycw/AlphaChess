@@ -20,7 +20,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
-USE_RAY = True
+USE_RAY = False
 if USE_RAY:
     NUM_WORKERS = 5
     ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.DEBUG)
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
     type_id = 1
 
-    min_iterations = 1200
+    min_iterations = 1600
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
 
     if type_list[type_id] == 'initialize':

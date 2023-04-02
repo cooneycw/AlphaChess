@@ -1,4 +1,5 @@
 import chess
+import ctypes
 import chess.svg
 import cairosvg
 import io
@@ -127,4 +128,9 @@ def get_size(referrers):
             size = sys.getsizeof(referrer)
             variable_type = type(referrer)
             print(f"Object: {referrer}\nVariable name: {variable_name}\nType: {variable_type}\nSize: {size} bytes\n")
+
+
+def malloc_trim():
+    ctypes.CDLL('libc.so.6').malloc_trim(0)
+
 

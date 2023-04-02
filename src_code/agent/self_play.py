@@ -1,8 +1,11 @@
 import gc
+import sys
+import objgraph
 from config.config import Config
-from src_code.agent.agent import AlphaZeroChess
+from src_code.agent.agent import AlphaZeroChess, Node
 from src_code.agent.agent import board_to_input, draw_board
-from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, print_variable_sizes_pympler, get_size
+from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, \
+    malloc_trim, print_variable_sizes_pympler, get_size
 
 
 def play_games(pass_dict):
@@ -67,7 +70,33 @@ def play_games(pass_dict):
 
             del old_node_list, new_node_list
 
+            # objgraph.show_refs(agent.tree.root, filename=f'/home/cooneycw/root_refs.png')
+            # objgraph.show_refs(agent.tree.network, filename=f'/home/cooneycw/network_refs.png')
+            # objgraph.show_backrefs(agent.tree.root, filename=f'/home/cooneycw/root_backrefs.png')
+            # objgraph.show_backrefs(agent.tree.network, filename=f'/home/cooneycw/network_backrefs.png')
+
+            objects = gc.get_objects()
+            print(f'Objects: {len(objects)}')
+
+            # create a list of tuples containing each object and its size
+            obj_sizes = [(obj, sys.getsizeof(obj)) for obj in objects]
+
+            # sort the list of tuples by the size of the objects
+            obj_sizes.sort(key=lambda x: x[1], reverse=True)
+
+            # display the top 100 objects by size
+            for obj, size in obj_sizes[:100]:
+                print(type(obj), size)
+
+            list_objects = [obj for obj in gc.get_objects() if isinstance(obj, list)]
+            node_objects = [obj for obj in gc.get_objects() if isinstance(obj, Node)]
+
+            print(f'Number of lists: {len(list_objects)}')
+            print(f'Number of nodes: {len(node_objects)}')
+
+            del list_objects, node_objects, objects, size, obj_sizes, obj
             gc.collect()
+            malloc_trim()
             agent.move_counter.increment()
 
             # Print the result of the game
