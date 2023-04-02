@@ -5,7 +5,6 @@ import redis
 import math
 import copy
 from memory_profiler import profile
-import weakref
 import random
 import pickle
 import numpy as np
@@ -505,7 +504,7 @@ class Node:
         Node.all_nodes.add(self)
 
     def set_parent(self, parent):
-        self.parent = weakref.ref(parent)
+        self.parent = parent
 
     def remove_from_all_nodes(self):
         del self.board
