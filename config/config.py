@@ -26,8 +26,8 @@ class Config:
         self.weight_decay = 1e-4
         self.num_iterations = num_iterations
         self.num_evaluation_games = 100
-        self.training_sample = 1000
-        self.training_samples = 150
+        self.training_sample = 800
+        self.training_samples = 125
         self.reward_discount = 0.99
         self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.03  # Starting value for alpha

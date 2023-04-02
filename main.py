@@ -72,7 +72,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
-    type_id = 2
+    type_id = 3
 
     min_iterations = 1200
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
@@ -91,7 +91,7 @@ if __name__ == '__main__':
 
     elif type_list[type_id] == 'evaluate':
         assert USE_RAY is True, 'USE_RAY must be True'
-        config = Config(num_iterations=1600, verbosity=False)
+        config = Config(num_iterations=1200, verbosity=False)
         agent_admin = AlphaZeroChess(config)
 
         network_keys = scan_redis_for_networks(agent_admin, 'network_candidate_*')
@@ -124,8 +124,12 @@ if __name__ == '__main__':
                 challenger_losses += result['challenger_losses']
                 challenger_draws += result['challenger_draws']
 
-            print(f'Games: {game_cnt} Win/draw ratio: {0.1 * (int(0.5 + 1000 * challenger_wins / game_cnt))}% '
-                  f'Challenger wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
+            if (game_cnt - challenger_draws) == 0:
+                print(f'Games: {game_cnt} Wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
+            else:
+                print(f'Challenger wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
+                print(f'Games: {game_cnt} Win/lose ratio: {0.1 * (int(0.5 + 1000 * challenger_wins / (game_cnt - challenger_draws)))}% ')
+
             gc_list = gc.get_objects()
 
         if ((challenger_wins + challenger_draws) / game_cnt) >= 0.55:
