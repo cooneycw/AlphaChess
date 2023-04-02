@@ -58,7 +58,6 @@ class AlphaZeroChess:
         self.tree = MCTSTree(self)
         self.move_counter = self.config.MoveCounter()
 
-    @profile
     def get_action(self, iters=None):
         if iters is None:
             iters = self.config.num_iterations
