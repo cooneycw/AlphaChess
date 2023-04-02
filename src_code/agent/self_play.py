@@ -94,7 +94,7 @@ def play_games(pass_dict):
             # print(f'Number of lists: {len(list_objects)}')
             # print(f'Number of nodes: {len(node_objects)}')
             #
-            del list_objects, node_objects, objects, size, obj_sizes, obj
+            # del list_objects, node_objects, objects, size, obj_sizes, obj
             gc.collect()
             malloc_trim()
             agent.move_counter.increment()
