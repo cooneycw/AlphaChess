@@ -73,11 +73,12 @@ def save_training_data(agent, key_name, save_dict):
         print(f"Error saving training data to Redis key '{key_name}'")
 
 
-def load_training_data(agent, key_name):
+def load_training_data(agent, key_name, verbosity=True):
     # Connect to Redis and load the training data using the specified key name
     pickled_dict = agent.redis.get(key_name)
     save_dict = pickle.loads(pickled_dict)
-    print(f"Training data loaded from Redis key '{key_name}'  Value target:{save_dict['value_target']}")
+    if verbosity:
+        print(f"Training data loaded from Redis key '{key_name}'  Value target:{save_dict['value_target']}")
     return save_dict
 
 

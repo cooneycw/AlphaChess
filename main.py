@@ -20,9 +20,9 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
-USE_RAY = True
+USE_RAY = False
 if USE_RAY:
-    NUM_WORKERS = 4
+    NUM_WORKERS = 12
     ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.DEBUG)
 
 logging.getLogger('tensorflow').setLevel(logging.WARNING)
@@ -46,7 +46,7 @@ def main(in_params):
     num_iterations = in_params['num_iterations']
     num_evals = in_params['num_evals']
     print(f'Running the main function with type: {type}')
-    key_prefix = 'azChess_Aurora_prod'
+    key_prefix = 'azChess_Corsair_prod'
 
     if type == 'create_training_data':
         game_id = generate_game_id()
@@ -72,7 +72,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
-    type_id = 1
+    type_id = 2
 
     min_iterations = 1200
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
