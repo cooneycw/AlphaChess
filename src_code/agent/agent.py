@@ -353,6 +353,7 @@ class MCTSTree:
         best_node.Nvisit += 1
 
         node.Nvisit += 1
+        del network, best_node
         return policy
 
     def expand(self, leaf_node, network, first_expand):
@@ -373,7 +374,7 @@ class MCTSTree:
             pi = pi[0]
             pi = np.array(pi) / sum(pi)
 
-        legal_moves = get_legal_moves(leaf_node.board)
+        legal_moves = get_legal_moves(leaf_node.board.copy())
 
         # Create list of legal policy probabilities corresponding to legal moves
         legal_probabilities = [pi[self.config.all_chess_moves.index(move)] for move in legal_moves]
@@ -391,7 +392,7 @@ class MCTSTree:
                 player_to_move = 'black'
             else:
                 player_to_move = 'white'
-            child = Node(new_board, name=action, player_to_move=player_to_move)
+            child = Node(new_board.copy(), name=action, player_to_move=player_to_move)
             child.set_parent(leaf_node)
             if child.board.is_game_over(claim_draw=True):
                 winner = child.board.result()
@@ -409,6 +410,7 @@ class MCTSTree:
             child.prior_prob = legal_probabilities[i]
             leaf_node.children.append(child)
 
+        del new_board, state, legal_moves
         return legal_probabilities, first_expand
 
     def update_root(self, action):
@@ -484,7 +486,7 @@ class Node:
     all_nodes = set()
 
     def __init__(self, board, player_to_move='white', name='root'):
-        self.board = board.copy()
+        self.board = board
         self.Qreward = 0
         self.Nvisit = 0
         self.prior_prob = 0

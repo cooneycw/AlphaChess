@@ -75,25 +75,25 @@ def play_games(pass_dict):
             # objgraph.show_backrefs(agent.tree.root, filename=f'/home/cooneycw/root_backrefs.png')
             # objgraph.show_backrefs(agent.tree.network, filename=f'/home/cooneycw/network_backrefs.png')
 
-            objects = gc.get_objects()
-            print(f'Objects: {len(objects)}')
-
-            # create a list of tuples containing each object and its size
-            obj_sizes = [(obj, sys.getsizeof(obj)) for obj in objects]
-
-            # sort the list of tuples by the size of the objects
-            obj_sizes.sort(key=lambda x: x[1], reverse=True)
-
-            # display the top 100 objects by size
-            for obj, size in obj_sizes[:100]:
-                print(type(obj), size)
-
-            list_objects = [obj for obj in gc.get_objects() if isinstance(obj, list)]
-            node_objects = [obj for obj in gc.get_objects() if isinstance(obj, Node)]
-
-            print(f'Number of lists: {len(list_objects)}')
-            print(f'Number of nodes: {len(node_objects)}')
-
+            # objects = gc.get_objects()
+            # print(f'Objects: {len(objects)}')
+            #
+            # # create a list of tuples containing each object and its size
+            # obj_sizes = [(obj, sys.getsizeof(obj)) for obj in objects]
+            #
+            # # sort the list of tuples by the size of the objects
+            # obj_sizes.sort(key=lambda x: x[1], reverse=True)
+            #
+            # # display the top 100 objects by size
+            # for obj, size in obj_sizes[:100]:
+            #     print(type(obj), size)
+            #
+            # list_objects = [obj for obj in gc.get_objects() if isinstance(obj, list)]
+            # node_objects = [obj for obj in gc.get_objects() if isinstance(obj, Node)]
+            #
+            # print(f'Number of lists: {len(list_objects)}')
+            # print(f'Number of nodes: {len(node_objects)}')
+            #
             del list_objects, node_objects, objects, size, obj_sizes, obj
             gc.collect()
             malloc_trim()
