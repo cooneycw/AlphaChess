@@ -9,7 +9,6 @@ import random
 import pickle
 import numpy as np
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
 from tensorflow import keras
 from src_code.agent.utils import draw_board, malloc_trim
 from src_code.agent.network import create_network
@@ -108,11 +107,9 @@ class AlphaZeroChess:
         else:
             return 0
 
-    def update_network(self, states, policy_targets, value_targets):
+    def update_network(self, train_states, train_policy, train_value, val_states, val_policy, val_value):
         """Update the neural network with the latest training data."""
         # Split the data into training and validation sets
-        train_states, val_states, train_policy, val_policy, train_value, val_value = train_test_split(
-            states, policy_targets, value_targets, test_size=self.config.validation_split)
 
         train_dataset = self.config.ChessDataset(train_states, train_policy, train_value)
         train_dataloader = tf.data.Dataset.from_generator(lambda: train_dataset,

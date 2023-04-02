@@ -2,6 +2,7 @@ import random
 import itertools
 import numpy as np
 import datetime
+from sklearn.model_selection import train_test_split
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess
 from src_code.agent.utils import scan_redis_for_training_data, load_training_data
@@ -14,36 +15,53 @@ def train_model(key_prefix, num_train_records=2000):
     agent.load_networks('network_current')
     key_list = scan_redis_for_training_data(agent, key_prefix[0:7])
     # Get a list of keys and shuffle them
+
+    retrieved_data = []
+    states = []
+    policy_targets = []
+    value_targets = []
+    values = np.array(len(list(key_list)) * [0.0])
+
+    # Load and process the selected keys
+    for i, key in enumerate(list(key_list)):
+        retrieved_data.append(load_training_data(agent, key, config.verbosity))
+        states.append(retrieved_data[i]['state'])
+        policy_targets.append(retrieved_data[i]['policy_target'])
+        value_targets.append(retrieved_data[i]['value_target'])
+        values[i] = retrieved_data[i]['value_target']
+
+    train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value = \
+        split_data(config, key_list, states, policy_targets, value_targets)
+
     for j in range(config.training_samples):
-        shuffled_key_list = random.sample(list(key_list), len(list(key_list)))
-        selected_keys = itertools.islice(shuffled_key_list, min(num_train_records, config.training_sample))
+        num_train_samples = min(int(0.5 + (config.training_sample * (1-config.validation_split))), len(train_value))
+        num_val_samples = min(int(0.5 + (config.training_sample * config.validation_split)), len(val_value))
+        random_train_inds = random.sample(range(len(train_value)), num_train_samples)
+        random_val_inds = random.sample(range(len(val_value)), num_val_samples)
 
-        retrieved_data = []
-        states = []
-        policy_targets = []
-        value_targets = []
-        values = np.array(num_train_records * [0.0])
+        win_abs_ratio = np.sum(np.abs([train_value[i] for i in random_train_inds])) / len(random_train_inds)
+        win_ratio = np.sum([train_value[i] for i in random_train_inds]) / len(random_train_inds)
 
-        # Load and process the selected keys
-        for i, key in enumerate(selected_keys):
-            retrieved_data.append(load_training_data(agent, key, config.verbosity))
-            states.append(retrieved_data[i]['state'])
-            policy_targets.append(retrieved_data[i]['policy_target'])
-            value_targets.append(retrieved_data[i]['value_target'])
-            values[i] = retrieved_data[i]['value_target']
+        print(f'Sample: {j} of {config.training_samples}  Loaded {len(random_train_inds)} training records and {len(random_val_inds)} validation records')
+        print(f'Sum of values: {np.sum([train_value[i] for i in random_train_inds])}  Win Absolute Ratio: {win_abs_ratio}%  Win Ratio: {win_ratio}%')
 
-        win_abs_ratio = np.sum(np.abs(values)) / len(retrieved_data)
-        win_ratio = np.sum(values) / len(retrieved_data)
+        agent.update_network([train_states[i] for i in random_train_inds],
+                             [train_policy[i] for i in random_train_inds],
+                             [train_value[i] for i in random_train_inds],
+                             [val_states[j] for j in random_val_inds],
+                             [val_policy[j] for j in random_val_inds],
+                             [val_value[j] for j in random_val_inds])
 
-        print(f'Sample: {j} of {config.training_samples} Loaded {len(retrieved_data)} training records')
-        print(f'Sum of values: {np.sum(values)}  Win Absolute Ratio: {win_abs_ratio}  Win Ratio: {win_ratio}')
-
-        agent.update_network(states, policy_targets, value_targets)
-        now = datetime.datetime.now()
-        j += 1
+    now = datetime.datetime.now()
 
     # Format the datetime as separate columns for date and time
     date_str = now.strftime("%Y-%m-%d")
     time_str = now.strftime("%H:%M:%S")
     key_name = 'network_candidate_' + date_str + '_' + time_str
     agent.save_networks(key_name)
+
+
+def split_data(config, key_list, states, policy_targets, value_targets):
+    train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value = \
+        train_test_split(key_list, states, policy_targets, value_targets, test_size=config.validation_split)
+    return train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value

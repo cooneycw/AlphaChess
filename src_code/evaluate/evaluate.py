@@ -91,5 +91,3 @@ def run_evaluation(game_id, key):
                 out_params['challenger_draws'] = 1
 
             return out_params
-
-
