@@ -1,6 +1,6 @@
-import chess
 import redis
 import math
+import tracemalloc
 import copy
 import gc
 import weakref
@@ -11,14 +11,14 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from tensorflow import keras
 from src_code.agent.utils import draw_board
+from src_code.agent.chess_env import ChessGame
 from src_code.agent.network import create_network
 
 
 class AlphaZeroChess:
     def __init__(self, config, network=None):
         self.config = config
-        self.board = chess.Board()
-        # self.board = chess.Board(None)
+        self.chess_game_agent = ChessGame()
         # # Place the black king at b8 (index 17)
         # self.board.set_piece_at(32, chess.Piece(chess.KING, chess.BLACK))
         #
@@ -53,7 +53,6 @@ class AlphaZeroChess:
         self.temperature = self.min_temperature
 
     def reset(self):
-        self.board.reset()
         self.tree = MCTSTree(self)
         self.move_counter = self.config.MoveCounter()
 
@@ -87,10 +86,12 @@ class AlphaZeroChess:
             action = len(temp_adj_policy) - 1
 
         self.sim_counter.reset()
+        del temp_adj_policy, comparator
+        gc.collect()
         return policy_uci[action], policy, policy_array
 
     def game_over(self):
-        return self.board.is_game_over(claim_draw=True)
+        return self.chess_game_agent.board.is_game_over(claim_draw=True)
 
     def update_root(self, uci_move):
         for child in self.tree.root.children:
@@ -100,21 +101,6 @@ class AlphaZeroChess:
                 self.tree.root.parent = None
                 self.tree.root.name = 'root'
                 break
-
-    def get_result(self):
-        # Check if the game is over
-        if self.board.is_game_over(claim_draw=True):
-            # Check if the game ended in checkmate
-            if self.board.is_checkmate():
-                # Return 1 if white wins, 0 if black wins
-                return 1 if self.board.turn == chess.WHITE else -1
-            # Otherwise, the game ended in stalemate or other draw
-            elif self.board.is_stalemate() or self.board.is_fivefold_repetition() or self.board.is_insufficient_material() or self.board.is_seventyfive_moves():
-                return 0.5 if self.board.turn == chess.WHITE else -0.5
-            else:
-                return 0
-        else:
-            return 0
 
     def update_network(self, states, policy_targets, value_targets):
         """Update the neural network with the latest training data."""
@@ -229,81 +215,83 @@ class AlphaZeroChess:
         print(f"Network weights saved to Redis key '{key_name}'")
 
 
-def board_to_input(config, board):
+def board_to_input(config, board_fen, chess_game_mcts):
     # Create an empty 8x8x17 tensor
+    chess_game_mcts.board.set_fen(board_fen)
     input_tensor = np.zeros((config.board_size, config.board_size, config.num_channels))
 
     # Encode the current player in the first channel
-    input_tensor[:, :, 0] = (board.turn * 1.0)
+    input_tensor[:, :, 0] = (chess_game_mcts.board.turn * 1.0)
 
     # Encode the piece positions in channels 2-13
     piece_map = {'p': 0, 'n': 1, 'b': 2, 'r': 3, 'q': 4, 'k': 5}
-    for square, piece in board.piece_map().items():
-        if piece.color == chess.WHITE:
+    for square, piece in chess_game_mcts.board.piece_map().items():
+        if piece.color == chess_game_mcts.WHITE:
             piece_idx = piece.piece_type - 1
         else:
             piece_idx = piece.piece_type - 1 + 6
-        input_tensor[chess.square_rank(square), chess.square_file(square), piece_idx] = 1
+        input_tensor[chess_game_mcts.square_rank(square), chess_game_mcts.square_file(square), piece_idx] = 1
 
     # Encode the fullmove number in channel 14
-    input_tensor[:, :, 13] = board.fullmove_number / 100.0
+    input_tensor[:, :, 13] = chess_game_mcts.board.fullmove_number / 100.0
 
     # Encode the halfmove clock in channel 15
-    input_tensor[:, :, 14] = board.halfmove_clock / 100.0
+    input_tensor[:, :, 14] = chess_game_mcts.board.halfmove_clock / 100.0
 
     # Encode the remaining moves in channel 16
-    remaining_moves = (2 * 50) - board.fullmove_number
+    remaining_moves = (2 * 50) - chess_game_mcts.board.fullmove_number
     input_tensor[:, :, 15] = remaining_moves / 100.0
 
     # Encode the remaining half-moves in channel 17
-    remaining_halfmoves = 100 - board.halfmove_clock
+    remaining_halfmoves = 100 - chess_game_mcts.board.halfmove_clock
     input_tensor[:, :, 16] = remaining_halfmoves / 100.0
-
-    del board
 
     return input_tensor
 
 
-def get_legal_moves(board):
+def get_legal_moves(board_fen, chess_game_mcts):
     """
     Return a list of all legal moves for the current player on the given board.
     """
-    legal_moves = list(board.legal_moves)
+    chess_game_mcts.board.set_fen(board_fen)
+    legal_moves = list(chess_game_mcts.board.legal_moves)
     return [move.uci() for move in legal_moves]
 
 
-def move_to_index(move):
-    # Convert the move string to a chess.Move object
-    move_obj = chess.Move.from_uci(move)
-    # Convert the move object to an integer index
-    index = move_obj.from_square * 64 + move_obj.to_square
-    return index
+# def move_to_index(move):
+#     # Convert the move string to a chess.Move object
+#     move_obj = chess.Move.from_uci(move)
+#     # Convert the move object to an integer index
+#     index = move_obj.from_square * 64 + move_obj.to_square
+#     return index
 
 
 class MCTSTree:
     # https://towardsdatascience.com/monte-carlo-tree-search-an-introduction-503d8c04e168
     def __init__(self, az):
+        self.chess_game_mcts = ChessGame()
         node_list = self.create_nodes(az)
         self.root = node_list[0]
         self.network = az.network
         self.config = az.config
+
         self.unused_nodes = node_list[1:self.config.max_nodes]
 
-    @staticmethod
-    def create_nodes(az):
+    def create_nodes(self, az):
         all_nodes = list()
         for i in range(az.config.max_nodes):
-            all_nodes.append(Node(az.board.copy(), player_to_move=None, name='unused'))
+            all_nodes.append(Node(board_fen=None, player_to_move=None, name='unused'))
         all_nodes[0].name = 'root'
+        all_nodes[0].board_fen = self.chess_game_mcts.board.fen()
         all_nodes[0].player_to_move = 'white'
         return all_nodes
 
-    def add_child_node(self, parent, board, player_to_move, name):
+    def add_child_node(self, parent, board_fen, player_to_move, name):
         if len(self.unused_nodes) == 0:
             raise Exception('No more nodes available: expand config.max_nodes')
         node = self.unused_nodes.pop()
         node.parent = parent
-        node.board = board
+        node.board_fen = board_fen
         node.player_to_move = player_to_move
         node.name = name
         node.parent.children.append(node)
@@ -331,7 +319,7 @@ class MCTSTree:
         policy_uci = [child.name for child in self.root.children]
 
         if any(math.isnan(pol) for pol in policy):
-            policy = np.array([1 * self.root.children[i].board.is_game_over(claim_draw=True) for i in range(len(self.root.children))])
+            policy = np.array([1 * self.root.children[i].game_over for i in range(len(self.root.children))])
         # Normalize the policy
         policy = np.array(policy) / (sum(policy) + epsilon)
 
@@ -351,7 +339,8 @@ class MCTSTree:
         policy_uci = [child.name for child in self.root.children]
 
         if any(math.isnan(pol) for pol in policy):
-            policy = np.array([1 * self.root.children[i].board.is_game_over(claim_draw=True) for i in range(len(self.root.children))])
+            adjust_for_chess_game_mcts = 0
+            policy = np.array([1 * self.root.children[i].game_over for i in range(len(self.root.children))])
         # Normalize the policy
         policy = np.array(policy) / (sum(policy) + epsilon)
 
@@ -405,7 +394,7 @@ class MCTSTree:
 
     def expand(self, leaf_node, first_expand):
         # Get the policy and value from the neural network
-        state = board_to_input(self.config, leaf_node.board.copy())
+        state = board_to_input(self.config, leaf_node.board_fen, self.chess_game_mcts)
         pi, v = self.network.predict(np.expand_dims(state, axis=0), verbose=0)
         del state
         leaf_node.prior_value = v[0][0]
@@ -421,7 +410,7 @@ class MCTSTree:
             pi = pi[0]
             pi = np.array(pi) / sum(pi)
 
-        legal_moves = get_legal_moves(leaf_node.board)
+        legal_moves = get_legal_moves(leaf_node.board_fen, self.chess_game_mcts)
 
         # Create list of legal policy probabilities corresponding to legal moves
         legal_probabilities = [pi[self.config.all_chess_moves.index(move)] for move in legal_moves]
@@ -431,16 +420,18 @@ class MCTSTree:
         legal_probabilities /= (np.sum(legal_probabilities) + epsilon)
 
         for i, action in enumerate(legal_moves):
-            new_board = leaf_node.board.copy()
-            new_board.push_uci(action)
+            new_board_fen = leaf_node.board_fen
+            self.chess_game_mcts.board.set_fen(new_board_fen)
+            self.chess_game_mcts.board.push_uci(action)
             if leaf_node.player_to_move == 'white':
                 player_to_move = 'black'
             else:
                 player_to_move = 'white'
-            child = self.add_child_node(parent=leaf_node, board=new_board, name=action, player_to_move=player_to_move)
 
-            if child.board.is_game_over(claim_draw=True):
-                winner = child.board.result()
+            child = self.add_child_node(parent=leaf_node, board_fen=new_board_fen, name=action, player_to_move=player_to_move)
+            self.chess_game_mcts.board.set_fen(child.board_fen)
+            if self.chess_game_mcts.board.is_game_over(claim_draw=True):
+                winner = self.chess_game_mcts.board.result()
                 child.game_over = True
                 if winner == '1-0':
                     child.prior_value = 1
@@ -454,7 +445,7 @@ class MCTSTree:
 
             child.prior_prob = legal_probabilities[i]
 
-        del legal_moves
+        del legal_moves, leaf_node, pi, v, new_board_fen, child
         return legal_probabilities, first_expand
 
     # def remove_node_and_descendants(self, node):
@@ -519,8 +510,8 @@ def policy_to_prob_array(policy, legal_moves, all_moves_list):
 
 
 class Node:
-    def __init__(self, board=None, player_to_move='white', name='root'):
-        self.board = board
+    def __init__(self, board_fen=None, player_to_move='white', name='root'):
+        self.board_fen = board_fen
         self.Qreward = 0
         self.Nvisit = 0
         self.prior_prob = 0
@@ -533,7 +524,7 @@ class Node:
 
     def reset_node(self):
         self.name = 'unused'
-        self.board = None
+        self.board_fen = None
         self.Qreward = 0
         self.Nvisit = 0
         self.prior_prob = 0
@@ -549,8 +540,6 @@ class Node:
     def remove_from_all_nodes(self):
         for child in self.children:
             child.remove_from_all_nodes()
-        if isinstance(self.board, chess.Board):
-            del self.board
         Node.all_nodes.discard(self)
         del self
 
@@ -566,4 +555,3 @@ class Node:
         for child in self.children:
             count += child.count_nodes()[0]
         return count, len(Node.all_nodes)
-

@@ -1,9 +1,11 @@
 import gc
 import inspect
 import sys
+import tracemalloc
 from chess import Board
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess, Node
+from src_code.agent.chess_env import ChessGame
 from src_code.agent.agent import board_to_input, draw_board
 from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, \
     print_variable_sizes_pympler, print_uncollected_objects
@@ -20,6 +22,7 @@ def play_games(pass_dict):
     # Play the game
     for i in range(self_play_games):
         agent = AlphaZeroChess(config)
+        chess_game_play = ChessGame()
 
         key_id_list = []
         states = []
@@ -28,7 +31,7 @@ def play_games(pass_dict):
         # training loop:
         while not agent.game_over() and not game_limit_stop:
             # Get the current state of the board
-            player = 'white' if agent.board.turn else 'black'
+            player = 'white' if agent.chess_game_agent.board.turn else 'black'
             uci_move, policy, policy_target = agent.get_action()
 
             # agent.tree.root.count_nodes()
@@ -40,7 +43,7 @@ def play_games(pass_dict):
             # if player == 'black':
             #     uci_move = input()
 
-            agent.board.push_uci(uci_move)
+            agent.chess_game_agent.board.push_uci(uci_move)
 
             key_id = f'{key_prefix}_{game_id}_{agent.move_counter.count}'
             key_id_list.append(key_id)
@@ -50,13 +53,12 @@ def play_games(pass_dict):
                 agent.update_temperature()
             if (agent.move_counter.count % 1) == 0 and (agent.move_counter.count > 0):
                 agent.tree.width()
-                print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
-                print(agent.board)
+                print(f'Piece count (white / black): {get_board_piece_count(agent.chess_game_agent.board)}')
+                print(agent.chess_game_agent.board)
                 # if (agent.move_counter.count % 50) == 0:
                 #    draw_board(agent.board, display=True, verbosity=True)
             # Append the training data
-            state = board_to_input(config, agent.board.copy())
-            states.append(state)
+            states.append(agent.chess_game_agent.board.fen())
             policy_targets.append(policy_target)
 
             old_used_nodes = agent.tree.get_list_of_all_used_nodes()
@@ -77,19 +79,29 @@ def play_games(pass_dict):
             del nodes_to_delete, old_used_nodes, new_used_nodes
             gc.collect()
 
+            if agent.move_counter.count > 3:
+                snapshot = tracemalloc.take_snapshot()
+                top_stats = snapshot.statistics('lineno')
+                print("[ Top 10 ]")
+                for stat in top_stats[:10]:
+                    print(stat)
+
+            if agent.move_counter.count > 5:
+                tracemalloc.stop()
+
             # Print the result of the game
             if agent.game_over() or agent.move_counter.count > config.maximum_moves:
-                print(f'Game Over! Winner is {agent.board.result()}')
+                print(f'Game Over! Winner is {agent.chess_game_agent.board.result()}')
                 if agent.move_counter.count > config.maximum_moves:
                     game_limit_stop = True
                 # add the value outcomes to the training data
                 value_target = None
 
-                if agent.board.result() == '1-0':
+                if agent.chess_game_agent.board.result() == '1-0':
                     value_target = 1
-                elif agent.board.result() == '0-1':
+                elif agent.chess_game_agent.board.result() == '0-1':
                     value_target = -1
-                elif agent.board.result() == '1/2-1/2':
+                elif agent.chess_game_agent.board.result() == '1/2-1/2':
                     # modify for white players
                     if player == 'white':
                         value_target = 0.25
@@ -108,7 +120,8 @@ def play_games(pass_dict):
                     key_dict['key'] = key_id
                     key_dict['game_id'] = game_id
                     key_dict['move_id'] = j
-                    key_dict['state'] = states[j]
+                    state = board_to_input(config, states[j])
+                    key_dict['state'] = state
                     key_dict['policy_target'] = policy_targets[j]
                     key_dict['value_target'] = value_targets[j]
 
@@ -117,4 +130,5 @@ def play_games(pass_dict):
 
         agent.tree = None
         agent = None
+        del agent
         gc.collect()

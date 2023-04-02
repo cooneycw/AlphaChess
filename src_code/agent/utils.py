@@ -44,7 +44,8 @@ def generate_game_id():
     return game_id
 
 
-def get_board_piece_count(board):
+def get_board_piece_count(board_fen, chess_game_mcts):
+    board = chess_game_mcts.board(board_fen)
     num_white_pieces = len(board.pieces(chess.PAWN, chess.WHITE)) + \
                    len(board.pieces(chess.KNIGHT, chess.WHITE)) + \
                    len(board.pieces(chess.BISHOP, chess.WHITE)) + \
@@ -59,6 +60,7 @@ def get_board_piece_count(board):
                    len(board.pieces(chess.ROOK, chess.BLACK)) + \
                    len(board.pieces(chess.QUEEN, chess.BLACK)) + \
                    len(board.pieces(chess.KING, chess.BLACK))
+    del board
     return num_white_pieces, num_black_pieces
 
 
