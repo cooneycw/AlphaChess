@@ -1,12 +1,13 @@
 import random
 import copy
+import gc
 import chess
 import ray
 import numpy as np
 import tensorflow as tf
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess, board_to_input
-from src_code.agent.utils import get_board_piece_count
+from src_code.agent.utils import get_board_piece_count, malloc_trim
 
 
 @ray.remote
@@ -60,6 +61,9 @@ def run_evaluation(game_id, key):
             del abandoned_node_candidate
 
         del old_node_list_current, new_node_list_current, old_node_list_candidate, new_node_list_candidate
+
+        gc.collect()
+        malloc_trim()
 
         result = board.result()
         print(f'The {move_cnt} move was: {uci_move}')

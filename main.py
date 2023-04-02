@@ -20,9 +20,9 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
-USE_RAY = False
+USE_RAY = True
 if USE_RAY:
-    NUM_WORKERS = 5
+    NUM_WORKERS = 15
     ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.DEBUG)
 
 logging.getLogger('tensorflow').setLevel(logging.WARNING)
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
     type_id = 1
 
-    min_iterations = 1600
+    min_iterations = 1200
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
 
     if type_list[type_id] == 'initialize':

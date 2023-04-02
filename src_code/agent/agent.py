@@ -1,7 +1,10 @@
+import gc
+
 import chess
 import redis
 import math
 import copy
+from memory_profiler import profile
 import weakref
 import random
 import pickle
@@ -9,7 +12,7 @@ import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from tensorflow import keras
-from src_code.agent.utils import draw_board
+from src_code.agent.utils import draw_board, malloc_trim
 from src_code.agent.network import create_network
 
 
@@ -56,6 +59,7 @@ class AlphaZeroChess:
         self.tree = MCTSTree(self)
         self.move_counter = self.config.MoveCounter()
 
+    @profile
     def get_action(self, iters=None):
         if iters is None:
             iters = self.config.num_iterations
@@ -354,6 +358,8 @@ class MCTSTree:
 
         node.Nvisit += 1
         del network, best_node
+        gc.collect()
+        malloc_trim()
         return policy
 
     def expand(self, leaf_node, network, first_expand):
