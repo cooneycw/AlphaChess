@@ -9,7 +9,7 @@ class Config:
         self.board_size = 8
         self.num_channels = 17
         self.all_chess_moves = create_all_moves_list()
-        self.self_play_games = 100
+        self.self_play_games = 1
         self.redis_host = '192.168.5.77'
         self.redis_port = 6379
         self.redis_db = 0
@@ -28,12 +28,11 @@ class Config:
         self.num_evaluation_games = 100
         self.training_sample = 800
         self.training_samples = 125
-        self.early_stopping_epochs = 5
+        self.early_stopping_epochs = 8
         self.reward_discount = 0.99
         self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.03  # Starting value for alpha
         self.eps = 0.25  # Starting value for eps
-        self.num_sims = 800
         self.c_puct = 1.4
         self.alpha = 0.03
         self.optimizer = tf.keras.optimizers.Nadam(learning_rate=0.001)

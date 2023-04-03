@@ -1,14 +1,13 @@
 import gc
-
 import chess
 import redis
 import math
 import copy
-from memory_profiler import profile
 import random
 import pickle
 import numpy as np
 import tensorflow as tf
+# from line_profiler_pycharm import profile
 from tensorflow import keras
 from src_code.agent.utils import draw_board, malloc_trim
 from src_code.agent.network import create_network
@@ -57,6 +56,7 @@ class AlphaZeroChess:
         self.tree = MCTSTree(self)
         self.move_counter = self.config.MoveCounter()
 
+    # @profile
     def get_action(self, iters=None):
         if iters is None:
             iters = self.config.num_iterations
@@ -323,6 +323,7 @@ class MCTSTree:
 
         return policy, policy_uci, temp_adj_policy, policy_array
 
+    # @profile
     def process_mcts(self, node, config, network, first_expand):
         epsilon = 1e-8
         policy = []
@@ -360,14 +361,20 @@ class MCTSTree:
 
         node.Nvisit += 1
         del network, best_node
-        gc.collect()
-        malloc_trim()
+        #gc.collect()
+        #malloc_trim()
         return policy
 
+    # @profile
     def expand(self, leaf_node, network, first_expand):
         # Get the policy and value from the neural network
         state = board_to_input(self.config, leaf_node.board.copy())
-        pi, v = network.predict(np.expand_dims(state, axis=0), verbose=0)
+        state_expanded = np.expand_dims(state, axis=0)
+
+        # Create a TensorFlow dataset using the expanded input
+        state_ds = tf.data.Dataset.from_tensor_slices(state_expanded)
+        state_ds_batched = state_ds.batch(1)
+        pi, v = network.predict(state_ds_batched, verbose=0)
         leaf_node.prior_value = v[0][0]
         del v
 

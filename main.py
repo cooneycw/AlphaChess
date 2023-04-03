@@ -20,7 +20,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
-USE_RAY = True
+USE_RAY = False
 if USE_RAY:
     NUM_WORKERS = 3
     ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.DEBUG)
@@ -54,7 +54,7 @@ def main(in_params):
         pass_dict['game_id'] = game_id
         pass_dict['key_prefix'] = key_prefix
         pass_dict['num_iterations'] = num_iterations
-        pass_dict['self_play_games'] = 100
+        pass_dict['self_play_games'] = 1
         play_games(pass_dict)
 
         return f'Finished running the main function with type: {type} Game ID: {game_id}'
@@ -72,7 +72,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
-    type_id = 3
+    type_id = 1
 
     min_iterations = 1200
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
