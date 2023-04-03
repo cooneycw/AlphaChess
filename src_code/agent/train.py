@@ -59,9 +59,9 @@ def train_model(key_prefix, num_train_records=2000):
             last_n_val_losses.pop(0)  # Remove the oldest validation loss
 
         # Check if validation loss has not decreased for 'early_stopping_epochs' consecutive epochs
-        if len(last_n_val_losses) == config.early_stopping_epochs and all(x >= last_n_val_losses[-1] for x
+        if len(last_n_val_losses) == config.early_stopping_epochs and all(x <= last_n_val_losses[-1] for x
                                                                           in last_n_val_losses[:-1]):
-            print(f"Early stopping triggered at training episdoe {j}")
+            print(f"Early stopping triggered at training episode {j}")
             break
 
     now = datetime.datetime.now()
