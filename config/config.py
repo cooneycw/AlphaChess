@@ -28,6 +28,7 @@ class Config:
         self.num_evaluation_games = 100
         self.training_sample = 800
         self.training_samples = 125
+        self.early_stopping_epochs = 5
         self.reward_discount = 0.99
         self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.03  # Starting value for alpha

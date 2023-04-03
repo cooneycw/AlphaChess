@@ -121,6 +121,9 @@ class AlphaZeroChess:
                                                         (tf.float32, tf.float32, tf.float32)).batch(
             self.config.batch_size)
 
+        validation_loss_tot = 0
+        validation_loss_cnt = 0
+
         for epoch in range(self.config.num_epochs):
             avg_train_loss = 0
             avg_train_accuracy = 0
@@ -164,7 +167,11 @@ class AlphaZeroChess:
             avg_val_loss /= num_val_batches
             avg_val_accuracy /= num_val_batches
 
+            validation_loss_tot += avg_val_loss
+            validation_loss_cnt += num_val_batches
+
             print(f'Epoch {epoch + 1}: Train Loss: {avg_train_loss:.4f}, Train Accuracy: {avg_train_accuracy:.4f}, Val Loss: {avg_val_loss:.4f}, Val Accuracy: {avg_val_accuracy:.4f}')
+        return validation_loss_tot, validation_loss_cnt
 
     def load_network_weights(self, key_name):
         # Connect to Redis and retrieve the serialized weights

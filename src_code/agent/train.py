@@ -33,6 +33,7 @@ def train_model(key_prefix, num_train_records=2000):
     train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value = \
         split_data(config, key_list, states, policy_targets, value_targets)
 
+    last_n_val_losses = []
     for j in range(config.training_samples):
         num_train_samples = min(int(0.5 + (config.training_sample * (1-config.validation_split))), len(train_value))
         num_val_samples = min(int(0.5 + (config.training_sample * config.validation_split)), len(val_value))
@@ -45,12 +46,23 @@ def train_model(key_prefix, num_train_records=2000):
         print(f'Sample: {j} of {config.training_samples}  Loaded {len(random_train_inds)} training records and {len(random_val_inds)} validation records')
         print(f'Sum of values: {np.sum([train_value[i] for i in random_train_inds])}  Win Absolute Ratio: {win_abs_ratio}%  Win Ratio: {win_ratio}%')
 
-        agent.update_network([train_states[i] for i in random_train_inds],
-                             [train_policy[i] for i in random_train_inds],
-                             [train_value[i] for i in random_train_inds],
-                             [val_states[j] for j in random_val_inds],
-                             [val_policy[j] for j in random_val_inds],
-                             [val_value[j] for j in random_val_inds])
+        validation_loss_tot, validation_loss_cnt = agent.update_network([train_states[i] for i in random_train_inds],
+                                                                        [train_policy[i] for i in random_train_inds],
+                                                                        [train_value[i] for i in random_train_inds],
+                                                                        [val_states[j] for j in random_val_inds],
+                                                                        [val_policy[j] for j in random_val_inds],
+                                                                        [val_value[j] for j in random_val_inds])
+
+        last_n_val_losses.append(validation_loss_tot/validation_loss_cnt)
+
+        if len(last_n_val_losses) > config.early_stopping_epochs:
+            last_n_val_losses.pop(0)  # Remove the oldest validation loss
+
+        # Check if validation loss has not decreased for 'early_stopping_epochs' consecutive epochs
+        if len(last_n_val_losses) == config.early_stopping_epochs and all(x >= last_n_val_losses[-1] for x
+                                                                          in last_n_val_losses[:-1]):
+            print(f"Early stopping triggered at training episdoe {j}")
+            break
 
     now = datetime.datetime.now()
 
