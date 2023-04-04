@@ -22,8 +22,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 USE_RAY = False
 if USE_RAY:
-    NUM_WORKERS = 3
-    ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.DEBUG)
+    NUM_WORKERS = 12
+    ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.INFO)
 
 logging.getLogger('tensorflow').setLevel(logging.WARNING)
 physical_devices = tf.config.list_physical_devices('GPU')
@@ -72,7 +72,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
-    type_id = 1
+    type_id = 2
 
     min_iterations = 1200
     outer_config = Config(num_iterations=min_iterations, verbosity=False)

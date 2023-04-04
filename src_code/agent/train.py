@@ -33,6 +33,7 @@ def train_model(key_prefix, num_train_records=2000):
     train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value = \
         split_data(config, key_list, states, policy_targets, value_targets)
 
+    best_val = float('inf')
     last_n_val_losses = []
     for j in range(config.training_samples):
         num_train_samples = min(int(0.5 + (config.training_sample * (1-config.validation_split))), len(train_value))
@@ -58,6 +59,11 @@ def train_model(key_prefix, num_train_records=2000):
         if len(last_n_val_losses) > config.early_stopping_epochs:
             last_n_val_losses.pop(0)  # Remove the oldest validation loss
 
+        if len(last_n_val_losses) >= config.early_stopping_epochs:
+            if last_n_val_losses[-1] < best_val:
+                best_val = last_n_val_losses[-1]
+                agent.network.save('network_best_candidate')
+
         # Check if validation loss has not decreased for 'early_stopping_epochs' consecutive epochs
         if len(last_n_val_losses) == config.early_stopping_epochs and all(x <= last_n_val_losses[-1] for x
                                                                           in last_n_val_losses[:-1]):
@@ -70,8 +76,8 @@ def train_model(key_prefix, num_train_records=2000):
     date_str = now.strftime("%Y-%m-%d")
     time_str = now.strftime("%H:%M:%S")
     key_name = 'network_candidate_' + date_str + '_' + time_str
+    agent.load_networks('network_best_candidate')
     agent.save_networks(key_name)
-
 
 def split_data(config, key_list, states, policy_targets, value_targets):
     train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value = \
