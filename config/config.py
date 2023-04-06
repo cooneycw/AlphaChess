@@ -9,7 +9,7 @@ class Config:
         self.board_size = 8
         self.num_channels = 17
         self.all_chess_moves = create_all_moves_list()
-        self.self_play_games = 5000
+        self.self_play_games = 1
         self.redis_host = '192.168.5.77'
         self.redis_port = 6379
         self.redis_db = 0
@@ -17,7 +17,7 @@ class Config:
         self.num_epochs = 2
         self.validation_split = 0.2
         self.batch_size = 32
-        self.maximum_moves = 150
+        self.maximum_moves = 180
         self.temperature = 1
         self.min_temperature = 0.01
         self.temperature_threshold = 150

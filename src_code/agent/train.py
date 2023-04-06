@@ -62,7 +62,7 @@ def train_model(key_prefix, num_train_records=2000):
         if len(last_n_val_losses) >= config.early_stopping_epochs:
             if last_n_val_losses[-1] < best_val:
                 best_val = last_n_val_losses[-1]
-                agent.network.save('network_best_candidate')
+                agent.save_networks('network_best_candidate')
 
         # Check if validation loss has not decreased for 'early_stopping_epochs' consecutive epochs
         if len(last_n_val_losses) == config.early_stopping_epochs and all(x <= last_n_val_losses[-1] for x

@@ -1,13 +1,13 @@
 import gc
-# from line_profiler_pycharm import profile
+from line_profiler_pycharm import profile
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess, Node
 from src_code.agent.agent import board_to_input, draw_board
 from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, \
-    malloc_trim, print_variable_sizes_pympler, get_size
+    malloc_trim, print_variable_sizes_pympler, get_size, input_to_board
 
 
-# @profile
+@profile
 def play_games(pass_dict):
     game_id = pass_dict['game_id']
     key_prefix = pass_dict['key_prefix']
@@ -22,6 +22,7 @@ def play_games(pass_dict):
 
         key_id_list = []
         states = []
+        moves = []
         policy_targets = []
         game_limit_stop = False
         # training loop:
@@ -56,6 +57,7 @@ def play_games(pass_dict):
             # Append the training data
             state = board_to_input(config, agent.board)
             states.append(state)
+            moves.append(uci_move)
             policy_targets.append(policy_target)
 
             # Update the tree
@@ -131,6 +133,7 @@ def play_games(pass_dict):
                     key_dict['game_id'] = game_id
                     key_dict['move_id'] = j
                     key_dict['state'] = states[j]
+                    key_dict['move'] = moves[j]
                     key_dict['policy_target'] = policy_targets[j]
                     key_dict['value_target'] = value_targets[j]
 

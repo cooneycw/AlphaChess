@@ -7,7 +7,7 @@ import random
 import pickle
 import numpy as np
 import tensorflow as tf
-# from line_profiler_pycharm import profile
+from line_profiler_pycharm import profile
 from tensorflow import keras
 from src_code.agent.utils import draw_board, malloc_trim
 from src_code.agent.network import create_network
@@ -27,8 +27,6 @@ class AlphaZeroChess:
         # # Place the white pawn at a2
         # self.board.set_piece_at(24, chess.Piece(chess.QUEEN, chess.BLACK))
 
-        self.num_channels = 17
-        self.num_moves = 64 * 64
         self.temperature = config.temperature
         self.min_temperature = config.min_temperature
         self.temperature_threshold = config.temperature_threshold
@@ -38,7 +36,6 @@ class AlphaZeroChess:
         # Create the value networks
         if network is None:
             self.network = create_network(config)
-            self.load_network_weights('network_current')
         else:
             self.network = network
 
@@ -56,7 +53,7 @@ class AlphaZeroChess:
         self.tree = MCTSTree(self)
         self.move_counter = self.config.MoveCounter()
 
-    # @profile
+    @profile
     def get_action(self, iters=None):
         if iters is None:
             iters = self.config.num_iterations
@@ -232,14 +229,14 @@ def board_to_input(config, board):
     # Encode the current player in the first channel
     input_tensor[:, :, 0] = (board.turn * 1.0)
 
-    # Encode the piece positions in channels 2-13
+    # Encode the piece positions in channels 1-12
     piece_map = {'p': 0, 'n': 1, 'b': 2, 'r': 3, 'q': 4, 'k': 5}
     for square, piece in board.piece_map().items():
         if piece.color == chess.WHITE:
             piece_idx = piece.piece_type - 1
         else:
             piece_idx = piece.piece_type - 1 + 6
-        input_tensor[chess.square_rank(square), chess.square_file(square), piece_idx] = 1
+        input_tensor[chess.square_rank(square), chess.square_file(square), piece_idx + 1] = 1
 
     # Encode the fullmove number in channel 14
     input_tensor[:, :, 13] = board.fullmove_number / 100.0
@@ -323,7 +320,7 @@ class MCTSTree:
 
         return policy, policy_uci, temp_adj_policy, policy_array
 
-    # @profile
+    @profile
     def process_mcts(self, node, config, network, first_expand):
         epsilon = 1e-8
         policy = []
@@ -365,7 +362,7 @@ class MCTSTree:
         #malloc_trim()
         return policy
 
-    # @profile
+    @profile
     def expand(self, leaf_node, network, first_expand):
         # Get the policy and value from the neural network
         state = board_to_input(self.config, leaf_node.board.copy())

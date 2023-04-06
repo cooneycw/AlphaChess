@@ -135,3 +135,42 @@ def malloc_trim():
     ctypes.CDLL('libc.so.6').malloc_trim(0)
 
 
+def input_to_board(input_tensor):
+    # Create a new chess board object
+    board = chess.Board()
+
+    # Clear the board before setting pieces
+    board.clear()
+
+    # Decode the current player from the first channel
+    current_player = bool(input_tensor[0, 0, 0])
+
+    # Set the turn
+    board.turn = current_player
+
+    # Decode the piece positions from channels 1-12
+    piece_map = {
+        (0, 0): 'P', (0, 1): 'N', (0, 2): 'B', (0, 3): 'R', (0, 4): 'Q', (0, 5): 'K',
+        (1, 0): 'p', (1, 1): 'n', (1, 2): 'b', (1, 3): 'r', (1, 4): 'q', (1, 5): 'k',
+    }
+    for rank in range(8):
+        for file in range(8):
+            for channel in range(1, 13):
+                if input_tensor[rank, file, channel] == 1:
+                    color, piece_type = divmod(channel - 1, 6)
+                    piece_symbol = piece_map[(color, piece_type)]
+                    square = chess.square(file, rank)
+                    board.set_piece_at(square, chess.Piece.from_symbol(piece_symbol))
+
+    # Decode the fullmove number from channel 13
+    fullmove_number = int(input_tensor[0, 0, 13] * 100)
+
+    # Decode the halfmove clock from channel 14
+    halfmove_clock = int(input_tensor[0, 0, 14] * 100)
+
+    # Set the fullmove number and halfmove clock on the board
+    board.fullmove_number = fullmove_number
+    board.halfmove_clock = halfmove_clock
+
+    return board
+
