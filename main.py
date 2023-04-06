@@ -22,7 +22,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 USE_RAY = True
 if USE_RAY:
-    NUM_WORKERS = 8
+    NUM_WORKERS = 6
     ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.DEBUG)
 
 logging.getLogger('tensorflow').setLevel(logging.WARNING)

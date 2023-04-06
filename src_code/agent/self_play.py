@@ -1,5 +1,5 @@
 import gc
-from line_profiler_pycharm import profile
+# from line_profiler_pycharm import profile
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess, Node
 from src_code.agent.agent import board_to_input, draw_board
@@ -7,7 +7,7 @@ from src_code.agent.utils import get_board_piece_count, save_training_data, get_
     malloc_trim, print_variable_sizes_pympler, get_size, input_to_board
 
 
-@profile
+# @profile
 def play_games(pass_dict):
     game_id = pass_dict['game_id']
     key_prefix = pass_dict['key_prefix']
