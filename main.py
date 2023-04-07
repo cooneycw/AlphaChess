@@ -1,7 +1,6 @@
 import logging
 import ray
 import copy
-import time
 import gc
 import tensorflow as tf
 from config.config import Config, interpolate
@@ -47,7 +46,6 @@ def main(in_params):
 
     if type == 'create_training_data':
         game_id = generate_game_id()
-        time.sleep(2)  # necessary to enable unique id's
         print(f'game_id:{game_id} spawned.')
         pass_dict = dict()
         pass_dict['game_id'] = game_id

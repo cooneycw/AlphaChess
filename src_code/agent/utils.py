@@ -3,7 +3,7 @@ import ctypes
 import chess.svg
 import cairosvg
 import io
-import gc
+import time
 import inspect
 import sys
 import pickle
@@ -42,6 +42,7 @@ def generate_game_id():
     date_str = now.strftime("%Y-%m-%d")
     time_str = now.strftime("%H:%M:%S")
     game_id = date_str + '_' + time_str
+    time.sleep(1.2)
     return game_id
 
 
