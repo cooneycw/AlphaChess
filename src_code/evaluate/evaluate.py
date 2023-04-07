@@ -24,6 +24,13 @@ def run_evaluation(game_id, key):
     agent_current = AlphaZeroChess(config)
     agent_candidate = AlphaZeroChess(config)
     agent_candidate.load_networks(key)
+
+    out_params = dict()
+
+    out_params['challenger_wins'] = 0
+    out_params['challenger_losses'] = 0
+    out_params['challenger_draws'] = 0
+
     move_cnt = 0
 
     while not board.is_game_over(claim_draw=True):
@@ -70,24 +77,18 @@ def run_evaluation(game_id, key):
         print(f'Piece count (white / black): {get_board_piece_count(board)} White: {starting_player}')
         print(board)
 
-        out_params = dict()
-
-        out_params['challenger_wins'] = 0
-        out_params['challenger_losses'] = 0
-        out_params['challenger_draws'] = 0
-
-        if board.is_game_over(claim_draw=True) or move_cnt > 150:
+        if board.is_game_over(claim_draw=True) or move_cnt > config.maximum_moves:
             if result == '1-0':
                 if player_to_go == 'current':
-                    out_params['challenger_wins'] = 1
+                    out_params['challenger_wins'] += 1
                 else:
-                    out_params['challenger_losses'] = 1
+                    out_params['challenger_losses'] += 1
             elif result == '0-1':
                 if player_to_go == 'current':
-                    out_params['challenger_losses'] = 1
+                    out_params['challenger_losses'] += 1
                 else:
-                    out_params['challenger_wins'] = 1
+                    out_params['challenger_wins'] += 1
             else:
-                out_params['challenger_draws'] = 1
+                out_params['challenger_draws'] += 1
 
             return out_params

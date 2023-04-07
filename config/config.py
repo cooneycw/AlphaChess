@@ -14,7 +14,7 @@ class Config:
         self.redis_port = 6379
         self.redis_db = 0
         # Training settings
-        self.num_epochs = 2
+        self.num_epochs = 5
         self.validation_split = 0.2
         self.batch_size = 32
         self.maximum_moves = 180
