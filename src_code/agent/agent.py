@@ -90,21 +90,6 @@ class AlphaZeroChess:
     def game_over(self):
         return self.board.is_game_over(claim_draw=True)
 
-    def get_result(self):
-        # Check if the game is over
-        if self.board.is_game_over(claim_draw=True):
-            # Check if the game ended in checkmate
-            if self.board.is_checkmate():
-                # Return 1 if white wins, 0 if black wins
-                return 1 if self.board.turn == chess.WHITE else -1
-            # Otherwise, the game ended in stalemate or other draw
-            elif self.board.is_stalemate() or self.board.is_fivefold_repetition() or self.board.is_insufficient_material() or self.board.is_seventyfive_moves():
-                return 0.5 if self.board.turn == chess.WHITE else -0.5
-            else:
-                return 0
-        else:
-            return 0
-
     def update_network(self, train_states, train_policy, train_value, val_states, val_policy, val_value):
         """Update the neural network with the latest training data."""
         # Split the data into training and validation sets

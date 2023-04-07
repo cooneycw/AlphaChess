@@ -22,7 +22,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 USE_RAY = True
 if USE_RAY:
-    NUM_WORKERS = 6
+    NUM_WORKERS = 25
     ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.DEBUG)
 
 logging.getLogger('tensorflow').setLevel(logging.WARNING)
@@ -46,7 +46,7 @@ def main(in_params):
     num_iterations = in_params['num_iterations']
     num_evals = in_params['num_evals']
     print(f'Running the main function with type: {type}')
-    key_prefix = 'azChess_Aurora_prod'
+    key_prefix = 'azChess_Threadripper_prod'
 
     if type == 'create_training_data':
         game_id = generate_game_id()
@@ -143,7 +143,7 @@ if __name__ == '__main__':
 
     elif type_list[type_id] != 'initialize' and USE_RAY is True:
 
-        max_num_iterations = 1600
+        max_num_iterations = 1200
         outer_config = Config(min_iterations, verbosity=False)
 
         start_ind = 0

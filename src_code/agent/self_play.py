@@ -49,7 +49,7 @@ def play_games(pass_dict):
             if agent.move_counter.count > agent.temperature_threshold:
                 agent.update_temperature()
             if (agent.move_counter.count % 1) == 0 and (agent.move_counter.count > 0):
-                agent.tree.width()
+                # agent.tree.width()
                 print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
                 print(agent.board)
                 # if (agent.move_counter.count % 50) == 0:
@@ -109,11 +109,11 @@ def play_games(pass_dict):
                 # add the value outcomes to the training data
                 value_target = None
 
-                if agent.board.result() == '1-0':
+                if agent.board.result(claim_draw=True) == '1-0':
                     value_target = 1
-                elif agent.board.result() == '0-1':
+                elif agent.board.result(claim_draw=True) == '0-1':
                     value_target = -1
-                elif agent.board.result() == '1/2-1/2':
+                elif agent.board.result(claim_draw=True) == '1/2-1/2':
                     # modify for white players
                     if player == 'white':
                         value_target = 0.25
