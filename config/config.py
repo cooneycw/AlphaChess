@@ -16,7 +16,7 @@ class Config:
         # Training settings
         self.num_epochs = 5
         self.validation_split = 0.2
-        self.batch_size = 32
+        self.batch_size = 16
         self.maximum_moves = 180
         self.temperature = 1
         self.min_temperature = 0.01
@@ -26,7 +26,7 @@ class Config:
         self.weight_decay = 1e-4
         self.num_iterations = num_iterations
         self.num_evaluation_games = 100
-        self.training_sample = 800
+        self.training_sample = 500
         self.training_samples = 125
         self.early_stopping_epochs = 8
         self.reward_discount = 0.99

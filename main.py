@@ -1,12 +1,9 @@
 import logging
 import ray
 import copy
-import chess
+import time
 import gc
-import datetime
-import numpy as np
 import tensorflow as tf
-import multiprocessing as mp
 from config.config import Config, interpolate
 from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
 from src_code.agent.self_play import play_games
@@ -50,6 +47,7 @@ def main(in_params):
 
     if type == 'create_training_data':
         game_id = generate_game_id()
+        time.sleep(2)  # necessary to enable unique id's
         pass_dict = dict()
         pass_dict['game_id'] = game_id
         pass_dict['key_prefix'] = key_prefix
@@ -72,7 +70,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
-    type_id = 3
+    type_id = 1
 
     min_iterations = 1200
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
