@@ -67,7 +67,7 @@ class AlphaZeroChess:
             if self.config.verbosity is True:
                 if self.sim_counter.get_count() % int(0.5 + 0.5*self.config.num_iterations) == 0:
                     print(f'Game Number: {self.config.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
-                    self.tree.width()
+                    # self.tree.width()
 
         # retrieve the updated policy
         if self.tree.root.player_to_move == 'white':
