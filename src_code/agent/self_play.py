@@ -1,4 +1,5 @@
 import gc
+import datetime
 # from line_profiler_pycharm import profile
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess, Node
@@ -42,7 +43,7 @@ def play_games(pass_dict):
 
             agent.board.push_uci(uci_move)
 
-            key_id = f'{key_prefix}_{game_id}_{agent.move_counter.count}'
+            key_id = f'{key_prefix}_{game_id}_{agent.move_counter.count}_{datetime.datetime.now()}'
             key_id_list.append(key_id)
             # Print the board
             print(f'The {agent.move_counter.count} move was: {uci_move}')
