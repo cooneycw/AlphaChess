@@ -48,6 +48,7 @@ def main(in_params):
     if type == 'create_training_data':
         game_id = generate_game_id()
         time.sleep(2)  # necessary to enable unique id's
+        print(f'game_id:{game_id} spawned.')
         pass_dict = dict()
         pass_dict['game_id'] = game_id
         pass_dict['key_prefix'] = key_prefix
