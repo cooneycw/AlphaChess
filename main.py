@@ -12,20 +12,20 @@ from src_code.evaluate.utils import scan_redis_for_networks, delete_redis_key
 from src_code.agent.utils import draw_board, get_board_piece_count, generate_game_id, \
     save_training_data, load_training_data, scan_redis_for_training_data
 
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-USE_RAY = False
+USE_RAY = True
 if USE_RAY:
     NUM_WORKERS = 14
-    ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.INFO)
+    ray.init(num_cpus=NUM_WORKERS, num_gpus=1, ignore_reinit_error=True, logging_level=logging.INFO)
 
 logging.getLogger('tensorflow').setLevel(logging.WARNING)
 physical_devices = tf.config.list_physical_devices('GPU')
 if len(physical_devices) > 0:
     gpu_idx = 0  # Set the index of the GPU you want to use
     tf.config.experimental.set_virtual_device_configuration(physical_devices[gpu_idx], [
-        tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1024 * 1)])  # Set the memory limit (in bytes)
+        tf.config.experimental.VirtualDeviceConfiguration(memory_limit=256 * 1)])  # Set the memory limit (in bytes)
 else:
     print('No GPUs available')
 
