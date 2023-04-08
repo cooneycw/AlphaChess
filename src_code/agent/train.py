@@ -36,6 +36,7 @@ def train_model(key_prefix, num_train_records=2000):
 
     best_val = float('inf')
     last_n_val_losses = []
+    key_del_list = set()
     for j in range(config.training_samples):
         num_train_samples = min(int(0.5 + (config.training_sample * (1-config.validation_split))), len(train_value))
         num_val_samples = min(int(0.5 + (config.training_sample * config.validation_split)), len(val_value))
@@ -67,9 +68,9 @@ def train_model(key_prefix, num_train_records=2000):
 
         # Remove sampled games from Redis
         for train_key in [train_key_list[i] for i in random_train_inds]:
-            redis_conn.delete(train_key)
+            key_del_list.add(train_key)
         for val_key in [val_key_list[i] for i in random_val_inds]:
-            redis_conn.delete(val_key)
+            key_del_list.add(val_key)
 
         # Check if validation loss has not decreased for 'early_stopping_epochs' consecutive epochs
         if len(last_n_val_losses) == config.early_stopping_epochs and all(x <= last_n_val_losses[-1] for x
@@ -77,6 +78,11 @@ def train_model(key_prefix, num_train_records=2000):
             print(f"Early stopping triggered at training episode {j}")
             break
 
+    for keys in list(key_del_list):
+        # redis_conn.delete(keys)
+        pass
+
+    print(f'{len(list(key_del_list))} keys deleted from redis...')
     now = datetime.datetime.now()
 
     # Format the datetime as separate columns for date and time

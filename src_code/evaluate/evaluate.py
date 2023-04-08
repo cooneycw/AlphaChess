@@ -80,15 +80,20 @@ def run_evaluation(game_id, key):
         if board.is_game_over(claim_draw=True) or move_cnt > config.maximum_moves:
             if result == '1-0':
                 if player_to_go == 'current':
+                    print('Challenger wins!')
                     out_params['challenger_wins'] += 1
                 else:
+                    print('Candidate wins!')
                     out_params['challenger_losses'] += 1
             elif result == '0-1':
                 if player_to_go == 'current':
+                    print('Candidate wins!')
                     out_params['challenger_losses'] += 1
                 else:
+                    print('Challenger wins!')
                     out_params['challenger_wins'] += 1
             else:
+                print('Draw..')
                 out_params['challenger_draws'] += 1
 
             return out_params
