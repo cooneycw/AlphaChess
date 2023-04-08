@@ -3,6 +3,7 @@ import datetime
 import pickle
 import numpy as np
 from config.config import Config
+from src_code.agent.agent import AlphaZeroChess
 from src_code.agent.utils import input_to_board
 
 # Connect to Redis
@@ -13,8 +14,14 @@ keys = redis_client.keys('*')
 
 # Get a list of all keys that match the pattern
 az_keys = [key.decode('utf-8') for key in redis_client.keys('az*')]
-network_keys = [key.decode('utf-8') for key in redis_client.keys('network*')]
-
+network_keys = [key.decode('utf-8') for key in redis_client.keys('network_candidate*')]
+# key = network_keys[0]
+# agent_admin = AlphaZeroChess(config)
+# agent_admin.load_networks('network_current')
+# agent_admin.save_networks('network_previous')
+# agent_admin.load_networks(key)
+# agent_admin.save_networks('network_current')
+# agent_admin.save_networks('network_backup')
 az_key_tuples = [tuple(key.split('_')) for key in az_keys]
 
 
