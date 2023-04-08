@@ -17,15 +17,15 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 
 USE_RAY = True
 if USE_RAY:
-    NUM_WORKERS = 14
-    ray.init(num_cpus=NUM_WORKERS, num_gpus=1, ignore_reinit_error=True, logging_level=logging.INFO)
+    NUM_WORKERS = 100
+    ray.init(num_cpus=NUM_WORKERS, num_gpus=0, ignore_reinit_error=True, logging_level=logging.INFO)
 
 logging.getLogger('tensorflow').setLevel(logging.WARNING)
 physical_devices = tf.config.list_physical_devices('GPU')
 if len(physical_devices) > 0:
     gpu_idx = 0  # Set the index of the GPU you want to use
     tf.config.experimental.set_virtual_device_configuration(physical_devices[gpu_idx], [
-        tf.config.experimental.VirtualDeviceConfiguration(memory_limit=256 * 1)])  # Set the memory limit (in bytes)
+        tf.config.experimental.VirtualDeviceConfiguration(memory_limit=256 * 40)])  # Set the memory limit (in bytes)
 else:
     print('No GPUs available')
 
@@ -41,7 +41,7 @@ def main(in_params):
     num_iterations = in_params['num_iterations']
     num_evals = in_params['num_evals']
     print(f'Running the main function with type: {type}')
-    key_prefix = 'azChess_Corsair_prod'
+    key_prefix = 'azChess_Threadripper_prod'
 
     if type == 'create_training_data':
         game_id = generate_game_id()
@@ -68,7 +68,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
-    type_id = 1
+    type_id = 3
 
     min_iterations = 1600
     outer_config = Config(num_iterations=min_iterations, verbosity=False)

@@ -83,11 +83,11 @@ def run_evaluation(game_id, key):
                     print('Challenger wins!')
                     out_params['challenger_wins'] += 1
                 else:
-                    print('Candidate wins!')
+                    print('Current wins!')
                     out_params['challenger_losses'] += 1
             elif result == '0-1':
                 if player_to_go == 'current':
-                    print('Candidate wins!')
+                    print('Current wins!')
                     out_params['challenger_losses'] += 1
                 else:
                     print('Challenger wins!')
