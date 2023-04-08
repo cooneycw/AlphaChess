@@ -7,7 +7,7 @@ import random
 import pickle
 import numpy as np
 import tensorflow as tf
-# from line_profiler_pycharm import profile
+from line_profiler_pycharm import profile
 from tensorflow import keras
 from src_code.agent.utils import draw_board, malloc_trim
 from src_code.agent.network import create_network
@@ -53,7 +53,7 @@ class AlphaZeroChess:
         self.tree = MCTSTree(self)
         self.move_counter = self.config.MoveCounter()
 
-    # @profile
+    @profile
     def get_action(self, iters=None):
         if iters is None:
             iters = self.config.num_iterations
@@ -306,7 +306,7 @@ class MCTSTree:
 
         return policy, policy_uci, temp_adj_policy, policy_array
 
-    # @profile
+    @profile
     def process_mcts(self, node, config, network, first_expand):
         epsilon = 1e-8
         policy = []
@@ -348,7 +348,7 @@ class MCTSTree:
         #malloc_trim()
         return policy
 
-    # @profile
+    @profile
     def expand(self, leaf_node, network, first_expand):
         # Get the policy and value from the neural network
         state = board_to_input(self.config, leaf_node.board.copy())

@@ -1,5 +1,5 @@
 import random
-import itertools
+import redis
 import numpy as np
 import datetime
 from sklearn.model_selection import train_test_split
@@ -11,6 +11,7 @@ from src_code.agent.utils import scan_redis_for_training_data, load_training_dat
 def train_model(key_prefix, num_train_records=2000):
     config = Config(num_iterations=None, verbosity=False)
     agent = AlphaZeroChess(config)
+    redis_conn = redis.Redis(host=config.redis_host, port=config.redis_port, db=config.redis_db)
 
     agent.load_networks('network_current')
     key_list = scan_redis_for_training_data(agent, key_prefix[0:7])
@@ -64,6 +65,12 @@ def train_model(key_prefix, num_train_records=2000):
                 best_val = last_n_val_losses[-1]
                 agent.save_networks('network_best_candidate')
 
+        # Remove sampled games from Redis
+        for train_key in [train_key_list[i] for i in random_train_inds]:
+            redis_conn.delete(train_key)
+        for val_key in [val_key_list[i] for i in random_val_inds]:
+            redis_conn.delete(val_key)
+
         # Check if validation loss has not decreased for 'early_stopping_epochs' consecutive epochs
         if len(last_n_val_losses) == config.early_stopping_epochs and all(x <= last_n_val_losses[-1] for x
                                                                           in last_n_val_losses[:-1]):
@@ -78,6 +85,7 @@ def train_model(key_prefix, num_train_records=2000):
     key_name = 'network_candidate_' + date_str + '_' + time_str
     agent.load_networks('network_best_candidate')
     agent.save_networks(key_name)
+
 
 def split_data(config, key_list, states, policy_targets, value_targets):
     train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value = \
