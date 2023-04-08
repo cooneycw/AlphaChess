@@ -37,9 +37,9 @@ def play_games(pass_dict):
             # print(f'Local variables: {print_variable_sizes_pympler(locals())}')
 
             # Take the action and update the board state
-            # print(uci_move)
-            # if player == 'black':
-            #     uci_move = input()
+            print(uci_move)
+            if player == 'black':
+                uci_move = input()
 
             agent.board.push_uci(uci_move)
 
@@ -123,7 +123,7 @@ def play_games(pass_dict):
                 else:
                     value_target = 0
 
-                value_targets = [value_target * config.reward_discount ** (len(policy_targets) - i) for i in range(len(policy_targets) + 1)]
+                value_targets = [value_target * config.reward_discount ** (len(policy_targets) - (i+1)) for i in range(len(policy_targets))]
 
                 # Update the game counter
                 config.game_counter.increment()
