@@ -36,11 +36,11 @@ def run_evaluation(game_id, key):
     while not board.is_game_over(claim_draw=True):
         if player_to_go == 'current':
             uci_move, _, _ = agent_current.get_action()
-            _, _, _ = agent_candidate.get_action(iters=120)
+            _, _, _ = agent_candidate.get_action()
             player_to_go = 'candidate'
         else:
             uci_move, _, _ = agent_candidate.get_action()
-            _, _, _ = agent_current.get_action(iters=120)
+            _, _, _ = agent_current.get_action()
             player_to_go = 'current'
 
         board.push_uci(uci_move)
@@ -79,14 +79,14 @@ def run_evaluation(game_id, key):
 
         if board.is_game_over(claim_draw=True) or move_cnt > config.maximum_moves:
             if result == '1-0':
-                if player_to_go == 'current':
+                if starting_player == 'candidate':
                     print('Challenger wins!')
                     out_params['challenger_wins'] += 1
                 else:
                     print('Current wins!')
                     out_params['challenger_losses'] += 1
             elif result == '0-1':
-                if player_to_go == 'current':
+                if starting_player == 'candidate':
                     print('Current wins!')
                     out_params['challenger_losses'] += 1
                 else:
