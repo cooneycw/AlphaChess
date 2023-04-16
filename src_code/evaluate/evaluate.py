@@ -96,4 +96,12 @@ def run_evaluation(game_id, key):
                 print('Draw..')
                 out_params['challenger_draws'] += 1
 
+            agent_current.tree = None
+            agent_candidate.tree = None
+            agent_current = None
+            agent_candidate = None
+            del agent_current, agent_candidate
+            gc.collect()
+            malloc_trim()
+
             return out_params
