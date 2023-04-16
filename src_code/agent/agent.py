@@ -401,9 +401,9 @@ class MCTSTree:
                     child.prior_value = -1
                 elif winner == '1/2-1/2':
                     if child.parent.player_to_move == 'black':
-                        child.prior_value = -0.25
+                        child.prior_value = -0.5
                     elif child.parent.player_to_move == 'white':
-                        child.prior_value = 0.25
+                        child.prior_value = 0.5
 
             child.prior_prob = legal_probabilities[i]
             leaf_node.children.append(child)
