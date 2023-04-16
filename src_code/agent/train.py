@@ -78,8 +78,9 @@ def train_model(key_prefix, num_train_records=2000):
             print(f"Early stopping triggered at training episode {j}")
             break
 
-    for keys in list(key_del_list):
-        redis_conn.delete(keys)
+    for q, keys in enumerate(list(key_del_list)):
+        if q % 2 == 0:
+            redis_conn.delete(keys)
 
     print(f'{len(list(key_del_list))} keys deleted from redis...')
     now = datetime.datetime.now()
