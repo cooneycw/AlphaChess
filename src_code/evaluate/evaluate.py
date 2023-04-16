@@ -13,7 +13,7 @@ from src_code.agent.utils import get_board_piece_count, malloc_trim
 @ray.remote
 def run_evaluation(game_id, key):
 
-    config = Config(num_iterations=1200, verbosity=False)
+    config = Config(num_iterations=800, verbosity=False)
     if random.random() < 0.5:
         player_to_go = 'current'
     else:
@@ -35,12 +35,12 @@ def run_evaluation(game_id, key):
 
     while not board.is_game_over(claim_draw=True):
         if player_to_go == 'current':
-            uci_move, _, _ = agent_current.get_action()
-            _, _, _ = agent_candidate.get_action()
+            uci_move, _, _ = agent_current.get_action(eval=True)
+            _, _, _ = agent_candidate.get_action(eval=True)
             player_to_go = 'candidate'
         else:
-            uci_move, _, _ = agent_candidate.get_action()
-            _, _, _ = agent_current.get_action()
+            uci_move, _, _ = agent_candidate.get_action(eval=True)
+            _, _, _ = agent_current.get_action(eval=True)
             player_to_go = 'current'
 
         board.push_uci(uci_move)

@@ -70,7 +70,7 @@ if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
     type_id = 1
 
-    min_iterations = 1200
+    min_iterations = 800
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
 
     if type_list[type_id] == 'initialize':

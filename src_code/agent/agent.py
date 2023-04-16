@@ -54,15 +54,17 @@ class AlphaZeroChess:
         self.move_counter = self.config.MoveCounter()
 
     # @profile
-    def get_action(self, iters=None):
+    def get_action(self, iters=None, eval=False):
         if iters is None:
             iters = self.config.num_iterations
+        if eval is True:
+            iters = self.config.eval_num_iterations
 
         """Get the best action to take given the current state of the board."""
         """Uses dirichlet noise to encourage exploration in place of temperature."""
         while self.sim_counter.get_count() < iters:
             first_expand = True
-            _ = self.tree.process_mcts(self.tree.root, self.config, self.network, first_expand)
+            _ = self.tree.process_mcts(self.tree.root, self.config, self.network, first_expand, eval)
             self.sim_counter.increment()
             if self.config.verbosity is True:
                 if self.sim_counter.get_count() % int(0.5 + 0.5*self.config.num_iterations) == 0:
@@ -307,7 +309,11 @@ class MCTSTree:
         return policy, policy_uci, temp_adj_policy, policy_array
 
     # @profile
-    def process_mcts(self, node, config, network, first_expand):
+    def process_mcts(self, node, config, network, first_expand, eval):
+        if eval is True:
+            c_puct = self.config.eval_c_puct
+        else:
+            c_puct = self.config.c_puct
         epsilon = 1e-8
         policy = []
         if node.game_over:
@@ -326,7 +332,7 @@ class MCTSTree:
             adj = -1
 
         for child in node.children:
-            uct = (adj * child.Qreward) + self.config.c_puct * child.prior_prob * math.sqrt(
+            uct = (adj * child.Qreward) + c_puct * child.prior_prob * math.sqrt(
                 node.Nvisit + epsilon) / (1 + child.Nvisit)
             policy.append(child.prior_prob)
 
@@ -335,7 +341,7 @@ class MCTSTree:
                 best_node = child
 
         # Simulate a game from the best_node
-        _ = self.process_mcts(best_node, config, network, first_expand)
+        _ = self.process_mcts(best_node, config, network, first_expand, eval)
 
         # Backpropagate the results of the simulation
 
