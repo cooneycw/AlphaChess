@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
     elif type_list[type_id] == 'evaluate':
         assert USE_RAY is True, 'USE_RAY must be True'
-        config = Config(num_iterations=1200, verbosity=False)
+        config = Config(num_iterations=800, verbosity=False)
         agent_admin = AlphaZeroChess(config)
 
         network_keys = scan_redis_for_networks(agent_admin, 'network_candidate_*')
@@ -139,7 +139,7 @@ if __name__ == '__main__':
 
     elif type_list[type_id] != 'initialize' and USE_RAY is True:
 
-        max_num_iterations = 1200
+        max_num_iterations = 800
         outer_config = Config(min_iterations, verbosity=False)
 
         start_ind = 0
