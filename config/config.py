@@ -29,7 +29,7 @@ class Config:
         self.training_sample = 2200
         self.training_samples = 35
         self.early_stopping_epochs = 32
-        self.reward_discount = 0.99
+        self.reward_discount = 1.00
         self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.3  # Starting value for alpha
         self.eps = 0.25  # Starting value for eps

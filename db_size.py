@@ -8,7 +8,7 @@ from src_code.agent.utils import input_to_board
 
 # Connect to Redis
 redis_client = redis.Redis(host='192.168.5.77', port=6379)
-config = Config(num_iterations=1600, verbosity=False)
+config = Config(num_iterations=1200, verbosity=False)
 # Get a list of all keys in the database
 keys = redis_client.keys('*')
 

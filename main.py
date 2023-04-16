@@ -15,9 +15,9 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-USE_RAY = True
+USE_RAY = False
 if USE_RAY:
-    NUM_WORKERS = 20
+    NUM_WORKERS = 25
     ray.init(num_cpus=NUM_WORKERS, num_gpus=1, ignore_reinit_error=True, logging_level=logging.INFO)
 
 logging.getLogger('tensorflow').setLevel(logging.WARNING)
@@ -68,9 +68,9 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
-    type_id = 3
+    type_id = 1
 
-    min_iterations = 1600
+    min_iterations = 1200
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
 
     if type_list[type_id] == 'initialize':
@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
     elif type_list[type_id] == 'evaluate':
         assert USE_RAY is True, 'USE_RAY must be True'
-        config = Config(num_iterations=1600, verbosity=False)
+        config = Config(num_iterations=1200, verbosity=False)
         agent_admin = AlphaZeroChess(config)
 
         network_keys = scan_redis_for_networks(agent_admin, 'network_candidate_*')
@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
             gc_list = gc.get_objects()
 
-        if ((challenger_wins + challenger_draws) / game_cnt) >= 0.55:
+        if ((challenger_wins + 0.5 * challenger_draws) / game_cnt) >= 0.55:
             print(f'Challenger won {0.1 * (int(0.5 + 1000 * challenger_wins / game_cnt))}% of the games')
             agent_admin.load_networks('network_current')
             agent_admin.save_networks('network_previous')
@@ -139,7 +139,7 @@ if __name__ == '__main__':
 
     elif type_list[type_id] != 'initialize' and USE_RAY is True:
 
-        max_num_iterations = 1600
+        max_num_iterations = 1200
         outer_config = Config(min_iterations, verbosity=False)
 
         start_ind = 0

@@ -117,11 +117,11 @@ def play_games(pass_dict):
                 elif agent.board.result(claim_draw=True) == '1/2-1/2':
                     # modify for white players
                     if player == 'white':
-                        value_target = 0.25
+                        value_target = 0.5
                     else:
-                        value_target = -0.25
+                        value_target = -0.5
                 else:
-                    value_target = 0
+                    value_target = -1.5
 
                 value_targets = [value_target * config.reward_discount ** (len(policy_targets) - (i+1)) for i in range(len(policy_targets))]
 
