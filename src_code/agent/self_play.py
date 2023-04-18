@@ -121,7 +121,7 @@ def play_games(pass_dict):
                     else:
                         value_target = -0.5
                 else:
-                    value_target = -1.5
+                    value_target = 0
 
                 value_targets = [value_target * config.reward_discount ** (len(policy_targets) - (i+1)) for i in range(len(policy_targets))]
 
