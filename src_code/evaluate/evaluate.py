@@ -1,6 +1,7 @@
 import random
 import copy
 import gc
+import datetime
 import chess
 import ray
 import numpy as np
@@ -14,7 +15,10 @@ from src_code.agent.utils import get_board_piece_count, malloc_trim
 def run_evaluation(game_id, key):
 
     config = Config(num_iterations=200, verbosity=False)
-    if random.random() < 0.5:
+    local_random = random.Random()
+    microseconds = datetime.datetime.now().microsecond
+    local_random.seed(microseconds)
+    if local_random.random() < 0.5:
         player_to_go = 'current'
     else:
         player_to_go = 'candidate'
@@ -27,7 +31,7 @@ def run_evaluation(game_id, key):
 
     out_params = dict()
 
-    out_params['player_to_go'] = player_to_go
+    out_params['player_to_go'] = starting_player
     out_params['challenger_wins'] = 0
     out_params['challenger_losses'] = 0
     out_params['challenger_draws'] = 0
