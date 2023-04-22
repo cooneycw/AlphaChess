@@ -63,8 +63,7 @@ class AlphaZeroChess:
         """Get the best action to take given the current state of the board."""
         """Uses dirichlet noise to encourage exploration in place of temperature."""
         while self.sim_counter.get_count() < iters:
-            first_expand = True
-            _ = self.tree.process_mcts(self.tree.root, self.config, self.network, first_expand, eval)
+            _ = self.tree.process_mcts(self.tree.root, self.config, self.network, eval)
             self.sim_counter.increment()
             if self.config.verbosity is True:
                 if self.sim_counter.get_count() % int(0.5 + 0.5*self.config.num_iterations) == 0:
@@ -286,7 +285,7 @@ class MCTSTree:
         return policy, policy_uci, temp_adj_policy, policy_array
 
     # @profile
-    def process_mcts(self, node, config, network, first_expand, eval):
+    def process_mcts(self, node, config, network, eval):
         if eval is True:
             c_puct = self.config.eval_c_puct
         else:
@@ -297,7 +296,7 @@ class MCTSTree:
             return policy
         # Select a node to expand
         if len(node.children) == 0:
-            policy, first_expand = self.expand(node, network, first_expand)
+            policy = self.expand(node, network)
             return policy
 
         # Evaluate the node
@@ -305,20 +304,22 @@ class MCTSTree:
         best_node = None
 
         adj = 1
-        #if node.player_to_move == 'black':
-        #    adj = -1
+        if node.player_to_move == 'black':
+            adj = -1
 
         for child in node.children:
-            uct = (adj * child.Qreward) + c_puct * child.prior_prob * math.sqrt(
+            uct = child.Qreward + c_puct * child.prior_prob * math.sqrt(
                 node.Nvisit + epsilon) / (1 + child.Nvisit)
             policy.append(child.prior_prob)
+
+            uct = uct * adj
 
             if uct > max_uct:
                 max_uct = uct
                 best_node = child
 
         # Simulate a game from the best_node
-        _ = self.process_mcts(best_node, config, network, first_expand, eval)
+        _ = self.process_mcts(best_node, config, network, eval)
 
         # Backpropagate the results of the simulation
 
@@ -332,7 +333,7 @@ class MCTSTree:
         return policy
 
     # @profile
-    def expand(self, leaf_node, network, first_expand):
+    def expand(self, leaf_node, network):
         # Get the policy and value from the neural network
         state = board_to_input(self.config, leaf_node.board.copy())
         state_expanded = np.expand_dims(state, axis=0)
@@ -345,12 +346,11 @@ class MCTSTree:
         del v
 
         # Add Dirichlet noise to the prior probabilities
-        if first_expand:
+        if self.root.Nvisit == 0:
             alpha = self.config.dirichlet_alpha
             noise = np.random.dirichlet(alpha * np.ones(len(pi[0])))
             pi = (1 - self.config.eps) * pi[0] + self.config.eps * noise
             pi = np.array(pi) / sum(pi)
-            first_expand = False
         else:
             pi = pi[0]
             pi = np.array(pi) / sum(pi)
@@ -392,7 +392,7 @@ class MCTSTree:
             leaf_node.children.append(child)
 
         del new_board, state, legal_moves
-        return legal_probabilities, first_expand
+        return legal_probabilities
 
     def update_root(self, action):
         for child in self.root.children:

@@ -27,6 +27,7 @@ def run_evaluation(game_id, key):
 
     out_params = dict()
 
+    out_params['player_to_go'] = player_to_go
     out_params['challenger_wins'] = 0
     out_params['challenger_losses'] = 0
     out_params['challenger_draws'] = 0

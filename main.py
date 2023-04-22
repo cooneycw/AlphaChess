@@ -71,7 +71,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
-    type_id = 2
+    type_id = 1
 
     min_iterations = 800
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
@@ -101,8 +101,12 @@ if __name__ == '__main__':
         input_dict['key'] = key
 
         challenger_wins = 0
+        challenger_white_wins = 0
+        challenger_black_wins = 0
         challenger_losses = 0
         challenger_draws = 0
+        challenger_white_games = 0
+        challenger_black_games = 0
 
         game_cnt = 0
         max_evals = config.num_evaluation_games
@@ -121,6 +125,12 @@ if __name__ == '__main__':
             for result in results:
                 game_cnt += 1
                 i += 1
+                if result['player_to_go'] == 'candidate':
+                    challenger_white_games += 1
+                    challenger_white_wins += result['challenger_wins']
+                else:
+                    challenger_black_games += 1
+                    challenger_black_wins += result['challenger_wins']
                 challenger_wins += result['challenger_wins']
                 challenger_losses += result['challenger_losses']
                 challenger_draws += result['challenger_draws']
@@ -129,6 +139,8 @@ if __name__ == '__main__':
                 print(f'Games: {game_cnt} Wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
             else:
                 print(f'Challenger wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
+                print(f'Challenger white wins: {challenger_white_wins} of {challenger_white_games}')
+                print(f'Challenger black wins: {challenger_black_wins} of {challenger_black_games}')
                 print(f'Games: {game_cnt} Win/lose ratio: {0.1 * (int(0.5 + 1000 * challenger_wins / (game_cnt - challenger_draws)))}% ')
 
             gc_list = gc.get_objects()
