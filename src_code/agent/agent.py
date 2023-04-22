@@ -7,8 +7,8 @@ import random
 import pickle
 import numpy as np
 import tensorflow as tf
-# from line_profiler_pycharm import profile
 from tensorflow import keras
+# from line_profiler_pycharm import profile
 from src_code.agent.utils import draw_board, malloc_trim
 from src_code.agent.network import create_network
 
@@ -72,10 +72,7 @@ class AlphaZeroChess:
                     # self.tree.width()
 
         # retrieve the updated policy
-        if self.tree.root.player_to_move == 'white':
-            policy, policy_uci, temp_adj_policy, policy_array = self.tree.get_policy_white(self)
-        else:
-            policy, policy_uci, temp_adj_policy, policy_array = self.tree.get_policy_black(self)
+        policy, policy_uci, temp_adj_policy, policy_array = self.tree.get_policy(self)
 
         comparator = np.random.rand()
         cumulative_prob = 0
@@ -268,7 +265,7 @@ class MCTSTree:
         self.root = Node(az.board.copy())
         self.config = az.config
 
-    def get_policy_white(self, agent):
+    def get_policy(self, agent):
         # Get the policy from the root node
         epsilon = 1e-8
         policy = [child.Nvisit for child in self.root.children]
@@ -282,26 +279,6 @@ class MCTSTree:
         # Adjust the policy according to the temperature
         temp_adj_policy = np.power(policy, 1 / agent.temperature)
         temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature)) + epsilon
-
-        policy_array = policy_to_prob_array(policy, policy_uci,
-                                            self.config.all_chess_moves)
-
-        return policy, policy_uci, temp_adj_policy, policy_array
-
-    def get_policy_black(self, agent):
-        # Get the policy from the root node
-        epsilon = 1e-8
-        policy = [child.Nvisit for child in self.root.children]
-        policy_uci = [child.name for child in self.root.children]
-
-        if any(math.isnan(pol) for pol in policy):
-            policy = np.array([1 * self.root.children[i].board.is_game_over(claim_draw=True) for i in range(len(self.root.children))])
-        # Normalize the policy
-        policy = np.array(policy) / (sum(policy) + epsilon)
-
-        # Adjust the policy according to the temperature
-        temp_adj_policy = np.power(policy, 1 / agent.temperature)
-        temp_adj_policy /= np.sum(np.power(policy, 1 / agent.temperature))
 
         policy_array = policy_to_prob_array(policy, policy_uci,
                                             self.config.all_chess_moves)
@@ -328,8 +305,8 @@ class MCTSTree:
         best_node = None
 
         adj = 1
-        if node.player_to_move == 'black':
-            adj = -1
+        #if node.player_to_move == 'black':
+        #    adj = -1
 
         for child in node.children:
             uct = (adj * child.Qreward) + c_puct * child.prior_prob * math.sqrt(

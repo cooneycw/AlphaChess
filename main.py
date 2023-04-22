@@ -18,7 +18,7 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 
 USE_RAY = False
 if USE_RAY:
-    NUM_WORKERS = 25
+    NUM_WORKERS = 50
     NUM_GPUS = 0
 
     ray.init(address=None, num_cpus=NUM_WORKERS, logging_level=logging.INFO)
@@ -106,8 +106,10 @@ if __name__ == '__main__':
 
         game_cnt = 0
         max_evals = config.num_evaluation_games
-        for i in range(0, max_evals):
+        i = 0
+        while i < max_evals:
             inds = [x for x in range(i, min(i + NUM_WORKERS, max_evals))]
+            print(f'Creating players corresponding to inds: {inds}')
 
             input_dict_list = []
             for ind in inds:
@@ -138,6 +140,7 @@ if __name__ == '__main__':
             agent_admin.load_networks(key)
             agent_admin.save_networks('network_current')
             agent_admin.save_networks('network_backup')
+        print(f'Network: {key} was not adequate.  Deleting key..')
         delete_redis_key(agent_admin, key)
 
     elif type_list[type_id] != 'initialize' and USE_RAY is True:

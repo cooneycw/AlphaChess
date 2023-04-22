@@ -14,9 +14,9 @@ class Config:
         self.redis_port = 6379
         self.redis_db = 0
         # Training settings
-        self.num_epochs = 25
-        self.validation_split = 0.05
-        self.batch_size = 384
+        self.num_epochs = 1
+        self.validation_split = 0.1
+        self.batch_size = 32
         self.maximum_moves = 180
         self.temperature = 1
         self.min_temperature = 0.01
@@ -27,9 +27,9 @@ class Config:
         self.num_iterations = num_iterations
         self.eval_num_iterations = 200
         self.num_evaluation_games = 100
-        self.training_sample = 30000
-        self.training_samples = 1
-        self.early_stopping_epochs = 1
+        self.training_sample = 5000
+        self.training_samples = 30
+        self.early_stopping_epochs = 18
         self.reward_discount = 1.00
         self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.3  # Starting value for alpha
