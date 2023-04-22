@@ -3,11 +3,13 @@ import logging
 import ray
 import copy
 import gc
+import sys
 import tensorflow as tf
 from config.config import Config, interpolate
 from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
 from src_code.agent.self_play import play_games
 from src_code.agent.train import train_model
+from src_code.play.play import play_game
 from src_code.evaluate.evaluate import run_evaluation
 from src_code.evaluate.utils import scan_redis_for_networks, delete_redis_key
 from src_code.agent.utils import draw_board, get_board_piece_count, generate_game_id, \
@@ -16,7 +18,7 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-USE_RAY = True
+USE_RAY = False
 if USE_RAY:
     NUM_WORKERS = 50
     NUM_GPUS = 0
@@ -70,11 +72,15 @@ def initialize(in_config):
 
 
 if __name__ == '__main__':
-    type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
-    type_id = 3
+    type_list = ['initialize', 'create_training_data', 'train', 'evaluate', 'play']
+    type_id = 4
 
     min_iterations = 800
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
+
+    if type_list[type_id] == 'play':
+        play_game()
+        sys.exit()
 
     if type_list[type_id] == 'initialize':
         initialize(outer_config)
