@@ -16,7 +16,7 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-USE_RAY = False
+USE_RAY = True
 if USE_RAY:
     NUM_WORKERS = 50
     NUM_GPUS = 0
@@ -71,7 +71,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate']
-    type_id = 1
+    type_id = 3
 
     min_iterations = 800
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
