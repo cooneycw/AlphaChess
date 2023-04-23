@@ -19,7 +19,7 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-USE_RAY = False
+USE_RAY = True
 if USE_RAY:
     NUM_WORKERS = 50
     NUM_GPUS = 0
@@ -47,7 +47,7 @@ def main(in_params):
     num_iterations = in_params['num_iterations']
     num_evals = in_params['num_evals']
     print(f'Running the main function with type: {type}')
-    key_prefix = 'azChess_Threadripper_prod'
+    key_prefix = 'azChess_Corsair_prod'
 
     if type == 'create_training_data':
         game_id = generate_game_id()
