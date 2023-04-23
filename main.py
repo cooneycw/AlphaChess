@@ -2,6 +2,7 @@ import os
 import logging
 import ray
 import copy
+import random
 import gc
 import sys
 import tensorflow as tf
@@ -73,7 +74,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate', 'play']
-    type_id = 2
+    type_id = 1
 
     min_iterations = 800
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
@@ -124,9 +125,10 @@ if __name__ == '__main__':
             input_dict_list = []
             for ind in inds:
                 input_dict['eval_game_id'] = ind
+                input_dict['random_val'] = random.random()
                 input_dict_list.append(copy.deepcopy(input_dict))
 
-            results = ray.get([run_evaluation.remote(input_dict['eval_game_id'], input_dict['key']) for input_dict in input_dict_list])
+            results = ray.get([run_evaluation.remote(input_dict['eval_game_id'], input_dict['key'], input_dict['random_val']) for input_dict in input_dict_list])
 
             for result in results:
                 game_cnt += 1

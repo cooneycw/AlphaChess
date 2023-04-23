@@ -23,7 +23,7 @@ def create_network(config):
     x = Conv2D(256, kernel_size=3, padding='same', name='conv1')(inputs)
     x = BatchNormalization(name='bn1')(x)
     x = Activation('relu', name='relu1')(x)
-    for i in range(4):
+    for i in range(20):
         x = residual_block(x, 256, block_idx=i+1)
 
     # Value head
@@ -31,8 +31,8 @@ def create_network(config):
     v = BatchNormalization(name='value_bn')(v)
     v = Activation('relu', name='value_relu')(v)
     v = Flatten(name='value_flatten')(v)
-    v = Dense(256, activation='relu', name='value_dense1')(v)
-    v = Dense(1, activation='tanh', name='value')(v)
+    v = Dense(256, activation='relu', kernel_initializer='lecun_uniform', name='value_dense1')(v)
+    v = Dense(1, activation='tanh', kernel_initializer='lecun_uniform', name='value')(v)
 
     # Policy head
     p = Conv2D(2, kernel_size=1, padding='same', name='policy_conv')(x)
