@@ -8,6 +8,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
+from collections import deque
 # from line_profiler_pycharm import profile
 from src_code.agent.utils import draw_board, malloc_trim
 from src_code.agent.network import create_network
@@ -66,8 +67,8 @@ class AlphaZeroChess:
             self.tree.process_mcts(self.tree.root, self.config, self.network, eval)
             self.sim_counter.increment()
             if self.config.verbosity is True:
-                if self.sim_counter.get_count() % int(0.5 + 0.5*self.config.num_iterations) == 0:
-                    print(f'Game Number: {self.config.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Number of simulations: {self.sim_counter.get_count()}')
+                if self.sim_counter.get_count() % 100 == 0:
+                    print(f'Game Number: {self.config.game_counter.get_count()} Move Number: {self.move_counter.get_count()} Simulations: {self.sim_counter.get_count()}')
                     # self.tree.width()
 
         # retrieve the updated policy
@@ -514,3 +515,91 @@ class Node:
         for child in self.children:
             count += child.count_lists()
         return count
+
+    def ucb1(self, parent_Nvisit, exploration_factor):
+        epsilon = 1e-6
+        if self.Nvisit == 0 or parent_Nvisit == 0:
+            return float('inf')
+        exploitation_term = self.Qreward / self.Nvisit
+        exploration_term = math.sqrt(math.log(parent_Nvisit) / self.Nvisit)
+
+        return exploitation_term + exploration_factor * exploration_term
+
+    def path_from_root(self):
+        path = []
+        current_node = self
+        while current_node is not None:
+            path.append(current_node.name)
+            current_node = current_node.parent
+        return " -> ".join(reversed(path))
+
+    @classmethod
+    def gather_statistics(cls, exploration_factor=0):
+        if not cls.all_nodes:
+            print("No nodes to gather statistics from.")
+            return
+
+        ucb1_values = {node: node.ucb1(node.parent.Nvisit if node.parent else 1, exploration_factor) for node in
+                       cls.all_nodes}
+        sorted_nodes = sorted(ucb1_values.items(), key=lambda item: item[1], reverse=True)
+
+        most_valuable_nodes = sorted_nodes[:5]  # Top 5 nodes
+        least_valuable_nodes = sorted_nodes[-5:]  # Bottom 5 nodes
+
+        game_over_nodes = [node for node in cls.all_nodes if node.game_over]
+        shortest_paths = cls.find_shortest_paths_to_game_over()
+
+        most_visited_nodes = sorted(cls.all_nodes, key=lambda node: node.Nvisit, reverse=True)[:5]
+        least_visited_nodes = sorted(cls.all_nodes, key=lambda node: node.Nvisit)[:5]
+
+        highest_qreward_nodes = sorted(cls.all_nodes, key=lambda node: node.Qreward, reverse=True)[:5]
+        lowest_qreward_nodes = sorted(cls.all_nodes, key=lambda node: node.Qreward)[:5]
+
+        print("\nMost Valuable Nodes:")
+        for node, ucb1_value in most_valuable_nodes:
+            print(f"Node: {node.path_from_root()}, UCB1 Value: {ucb1_value:.3f}")
+
+        print("\nLeast Valuable Nodes:")
+        for node, ucb1_value in least_valuable_nodes:
+            print(f"Node: {node.path_from_root()}, UCB1 Value: {ucb1_value:.3f}")
+
+        print(f"\nNumber of Game Over Nodes: {len(game_over_nodes)}")
+
+        print("\nShortest Paths to Game Over:")
+        for path in shortest_paths[:3]:
+            print(" -> ".join(node.name for node in path))
+
+        print("\nMost Visited Nodes:")
+        for node in most_visited_nodes:
+            print(f"Node: {node.path_from_root()}, Nvisit: {node.Nvisit}")
+
+        print("\nLeast Visited Nodes:")
+        for node in least_visited_nodes:
+            print(f"Node: {node.path_from_root()}, Nvisit: {node.Nvisit}")
+
+        print("\nHighest Qreward Nodes:")
+        for node in highest_qreward_nodes:
+            print(f"Node: {node.path_from_root()}, Qreward: {node.Qreward:.3f}")
+
+        print("\nLowest Qreward Nodes:")
+        for node in lowest_qreward_nodes:
+            print(f"Node: {node.path_from_root()}, Qreward: {node.Qreward:.3f}")
+
+    @classmethod
+    def find_shortest_paths_to_game_over(cls):
+        game_over_nodes = [node for node in cls.all_nodes if node.game_over]
+
+        if not game_over_nodes:
+            return []
+
+        shortest_paths = []
+        for game_over_node in game_over_nodes:
+            path = deque()
+            current_node = game_over_node
+            while current_node:
+                path.appendleft(current_node)
+                current_node = current_node.parent
+            shortest_paths.append(list(path))
+
+        shortest_paths.sort(key=lambda path: len(path))
+        return shortest_paths

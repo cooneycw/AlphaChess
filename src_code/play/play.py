@@ -8,40 +8,48 @@ from src_code.agent.utils import get_board_piece_count, save_training_data, get_
 
 def play_game():
     # Initialize the config and agent
-    config = Config(num_iterations=1200, verbosity=True)
+    config = Config(num_iterations=20, verbosity=True)
     # Play the game
     agent = AlphaZeroChess(config)
-
+    iters = None
+    iters_choices = [None, 40, 60, 100, 200, 400, 800, 1200]
     while not agent.game_over():
         # Get the current state of the board
         print(f'player to move: {agent.tree.root.player_to_move}')
-        uci_move, policy, policy_target = agent.get_action()
-        legal_moves = [x for x in agent.board.legal_moves]
-        print(f'recommended move: {uci_move}')
-        print(f'_____ Statistics _________')
-        # insert mcts data
-        print(f'_____ End Statistics -----')
+        uci_move, policy, policy_target = agent.get_action(iters=iters)
+        legal_moves = [str(x) for x in agent.board.legal_moves]
 
+        print(f'_____ Statistics _________')
+        agent.tree.width()
+        print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
+        Node.gather_statistics()
+        print(f'_____ End Statistics -----')
+        print(f'recommended move: {uci_move}')
         move = None
         while move is None:
             # Take the action and update the board state
+            print(agent.tree.root.board)
             print(f'input the move for {agent.tree.root.player_to_move}: ')
             move_inp = input()
+            if move_inp in legal_moves:
+                move = move_inp
+            else:
+                print(f'Invalid move...')
+            iters_inp = input("iters level (20 / 40 / 60 / 100 / 200 / 400 / 800 / 1200) [20]: ") or "20"
 
-            cwc = 0
-        # test for legal moves
+            if iters_inp in ['0', '1', '2', '3', '4', '5', '6', '7']:
+                choice = ['0', '1', '2', '3', '4', '5', '6', '7'].index(iters_inp)
+                iters = iters_choices[choice]
+            else:
+                iters = None
+
+        uci_move = move
         agent.board.push_uci(uci_move)
+        print(agent.board)
 
-        # Print the board
-        print(f'The {agent.move_counter.count} move was: {uci_move}')
         if agent.move_counter.count > agent.temperature_threshold:
+            print(f'Updating temperature..')
             agent.update_temperature()
-        if (agent.move_counter.count % 1) == 0 and (agent.move_counter.count > 0):
-            # agent.tree.width()
-            print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
-            print(agent.board)
-            # if (agent.move_counter.count % 50) == 0:
-            #    draw_board(agent.board, display=True, verbosity=True)
 
         # Update the tree
         old_node_list = agent.tree.root.get_all_nodes()
@@ -55,33 +63,6 @@ def play_game():
 
         del old_node_list, new_node_list
 
-        # objgraph.show_refs(agent.tree.root, filename=f'/home/cooneycw/root_refs.png')
-        # objgraph.show_refs(agent.tree.network, filename=f'/home/cooneycw/network_refs.png')
-        # objgraph.show_backrefs(agent.tree.root, filename=f'/home/cooneycw/root_backrefs.png')
-        # objgraph.show_backrefs(agent.tree.network, filename=f'/home/cooneycw/network_backrefs.png')
-
-        # objects = gc.get_objects()
-        # print(f'Objects: {len(objects)}')
-        #
-        # # create a list of tuples containing each object and its size
-        # obj_sizes = [(obj, sys.getsizeof(obj)) for obj in objects]
-        #
-        # # sort the list of tuples by the size of the objects
-        # obj_sizes.sort(key=lambda x: x[1], reverse=True)
-        #
-        # # display the top 100 objects by size
-        # for obj, size in obj_sizes[:100]:
-        #     print(type(obj), size)
-        #
-        # list_objects = [obj for obj in gc.get_objects() if isinstance(obj, list)]
-        # node_objects = [obj for obj in gc.get_objects() if isinstance(obj, Node)]
-        #
-        # print(f'Number of lists: {len(list_objects)}')
-        # print(f'Number of nodes: {len(node_objects)}')
-        #
-        # del list_objects, node_objects, objects, size, obj_sizes, obj
-        gc.collect()
-        malloc_trim()
         agent.move_counter.increment()
 
         # Print the result of the game

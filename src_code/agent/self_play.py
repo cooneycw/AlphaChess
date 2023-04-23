@@ -50,9 +50,10 @@ def play_games(pass_dict):
             if agent.move_counter.count > agent.temperature_threshold:
                 agent.update_temperature()
             if (agent.move_counter.count % 1) == 0 and (agent.move_counter.count > 0):
-                # agent.tree.width()
                 print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
                 print(agent.board)
+                agent.tree.width()
+                Node.gather_statistics()
                 # if (agent.move_counter.count % 50) == 0:
                 #    draw_board(agent.board, display=True, verbosity=True)
             # Append the training data
