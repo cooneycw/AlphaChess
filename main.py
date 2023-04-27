@@ -19,9 +19,9 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-USE_RAY = False
+USE_RAY = True
 if USE_RAY:
-    NUM_WORKERS = 50
+    NUM_WORKERS = 20
     NUM_GPUS = 0
 
     ray.init(address=None, num_cpus=NUM_WORKERS, logging_level=logging.INFO)
@@ -65,6 +65,10 @@ def main(in_params):
         train_model(key_prefix)
         return f'Finished running the main function with type: {type}'
 
+    elif type == 'play':
+        play_game()
+        return f'Finsihed running the main function with type: {type}'
+
 
 def initialize(in_config):
     network = create_network(in_config)
@@ -74,11 +78,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate', 'play']
-    type_id = 4
-
-    if type_list[type_id] == 'play':
-        play_game()
-        sys.exit()
+    type_id = 3
 
     min_iterations = 800
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
@@ -161,7 +161,7 @@ if __name__ == '__main__':
             agent_admin.save_networks('network_current')
             agent_admin.save_networks('network_backup')
         print(f'Network: {key} was not adequate.  Deleting key..')
-        delete_redis_key(agent_admin, key)
+        #delete_redis_key(agent_admin, key)
 
     elif type_list[type_id] != 'initialize' and USE_RAY is True:
 

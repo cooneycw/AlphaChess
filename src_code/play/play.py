@@ -4,6 +4,7 @@ from src_code.agent.agent import AlphaZeroChess, Node
 from src_code.agent.agent import board_to_input, draw_board
 from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, \
     malloc_trim, print_variable_sizes_pympler, get_size, input_to_board
+from src_code.in_out.windows import get_input, print_output
 
 
 def play_game():
@@ -30,18 +31,12 @@ def play_game():
             # Take the action and update the board state
             print(agent.tree.root.board)
             print(f'input the move for {agent.tree.root.player_to_move}: ')
-            move_inp = input()
-            if move_inp in legal_moves:
-                move = move_inp
-            else:
-                print(f'Invalid move...')
-            iters_inp = input("iters level (20 / 40 / 60 / 100 / 200 / 400 / 800 / 1200) [20]: ") or "20"
-
-            if iters_inp in ['0', '1', '2', '3', '4', '5', '6', '7']:
-                choice = ['0', '1', '2', '3', '4', '5', '6', '7'].index(iters_inp)
-                iters = iters_choices[choice]
-            else:
-                iters = None
+            ret_values = get_input(f'Input the move for {agent.tree.root.player_to_move}:',
+                                            'Select iterations:', legal_moves, [20, 40, 60, 100, 200, 400, 800, 1200],
+                                            20)
+            if ret_values is not None:
+                move = ret_values[0]
+                iters = int(ret_values[1])
 
         uci_move = move
         agent.board.push_uci(uci_move)

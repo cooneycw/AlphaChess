@@ -449,6 +449,88 @@ class MCTSTree:
         for child in node.children:
             self._width(child, node_counts, depth + 1)
 
+    def gather_tree_statistics(self, exploration_factor=0):
+        if not self.root:
+            print("No nodes to gather statistics from.")
+            return
+
+        all_nodes = self.root.get_all_nodes()
+
+        ucb1_values = {node: node.ucb1(node.parent.Nvisit if node.parent else 1, exploration_factor) for node in
+                       all_nodes}
+        sorted_nodes = sorted(ucb1_values.items(), key=lambda item: item[1], reverse=True)
+
+        most_valuable_nodes = sorted_nodes[:5]  # Top 5 nodes
+        least_valuable_nodes = sorted_nodes[-5:]  # Bottom 5 nodes
+
+        game_over_nodes = [node for node in all_nodes if node.game_over]
+        shortest_paths = self.find_shortest_paths_to_game_over_by_tree()
+
+        most_visited_nodes = sorted(all_nodes, key=lambda node: node.Nvisit, reverse=True)[:5]
+        least_visited_nodes = sorted(all_nodes, key=lambda node: node.Nvisit)[:5]
+
+        highest_qreward_nodes = sorted(all_nodes, key=lambda node: node.Qreward, reverse=True)[:5]
+        lowest_qreward_nodes = sorted(all_nodes, key=lambda node: node.Qreward)[:5]
+
+        highest_prior_value_nodes = sorted(all_nodes, key=lambda node: node.prior_value, reverse=True)[:5]
+        lowest_prior_value_nodes = sorted(all_nodes, key=lambda node: node.prior_value)[:5]
+
+        print(f"\nNumber of Game Over Nodes: {len(game_over_nodes)}")
+
+        print("\nMost Valuable Nodes:")
+        for node, ucb1_value in most_valuable_nodes:
+            print(f"Node: {node.path_from_root()}, UCB1 Value: {ucb1_value:.3f}")
+
+        print("\nLeast Valuable Nodes:")
+        for node, ucb1_value in least_valuable_nodes:
+            print(f"Node: {node.path_from_root()}, UCB1 Value: {ucb1_value:.3f}")
+
+        print("\nHighest Prior Value Nodes:")
+        for node in highest_prior_value_nodes:
+            print(f"Node: {node.path_from_root()}, Prior Value: {node.prior_value:.3f}")
+
+        print("\nLowest Prior Value Nodes:")
+        for node in lowest_prior_value_nodes:
+            print(f"Node: {node.path_from_root()}, Prior Value: {node.prior_value:.3f}")
+
+        print("\nShortest Paths to Game Over:")
+        for path in shortest_paths[:3]:
+            print(" -> ".join(node.name for node in path))
+
+        print("\nMost Visited Nodes:")
+        for node in most_visited_nodes:
+            print(f"Node: {node.path_from_root()}, Nvisit: {node.Nvisit}")
+
+        print("\nLeast Visited Nodes:")
+        for node in least_visited_nodes:
+            print(f"Node: {node.path_from_root()}, Nvisit: {node.Nvisit}")
+
+        print("\nHighest Qreward Nodes:")
+        for node in highest_qreward_nodes:
+            print(f"Node: {node.path_from_root()}, Qreward: {node.Qreward:.3f}")
+
+        print("\nLowest Qreward Nodes:")
+        for node in lowest_qreward_nodes:
+            print(f"Node: {node.path_from_root()}, Qreward: {node.Qreward:.3f}")
+
+    def find_shortest_paths_to_game_over_by_tree(self):
+        game_over_nodes = [node for node in self.root.get_all_nodes() if node.game_over]
+
+        if not game_over_nodes:
+            return []
+
+        shortest_paths = []
+        for game_over_node in game_over_nodes:
+            path = deque()
+            current_node = game_over_node
+            while current_node:
+                path.appendleft(current_node)
+                current_node = current_node.parent
+            shortest_paths.append(list(path))
+
+        shortest_paths.sort(key=lambda path: len(path))
+        return shortest_paths
+
 
 def policy_to_prob_array(policy, legal_moves, all_moves_list):
     prob_array = np.zeros(len(all_moves_list))
