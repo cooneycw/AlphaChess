@@ -218,7 +218,7 @@ def board_to_input(config, node):
         if board_ind == 0:
             curr_board = node.board.copy()
         else:
-            if node.prior_boards[board_ind] is None:
+            if node.prior_boards[board_ind - 1] is None:
                 break
             else:
                 curr_board = node.prior_boards[board_ind - 1].copy()
@@ -238,6 +238,7 @@ def board_to_input(config, node):
         opp_last_move = node.prior_moves[board_ind + 1]
         opp_last_move_1 = node.prior_moves[board_ind + 3]
         opp_last_move_2 = node.prior_moves[board_ind + 5]
+
         reps = 0
         opp_reps = 0
         if last_move is None:
@@ -616,7 +617,7 @@ class Node:
         self.name = name
         if prior_boards is None:
             self.prior_boards = [None] * 7
-            self.prior_moves = [None] * (7 + 5)
+            self.prior_moves = [None] * (8 + 5)
         else:
             self.prior_boards = prior_boards
             self.prior_moves = prior_moves

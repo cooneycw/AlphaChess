@@ -53,7 +53,7 @@ def play_games(pass_dict):
                 print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
                 print(agent.board)
                 agent.tree.width()
-                Node.gather_statistics()
+                agent.tree.gather_tree_statistics()
                 # if (agent.move_counter.count % 50) == 0:
                 #    draw_board(agent.board, display=True, verbosity=True)
             # Append the training data
