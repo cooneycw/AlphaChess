@@ -207,37 +207,88 @@ class AlphaZeroChess:
         print(f"Network weights saved to Redis key '{key_name}'")
 
 
-def board_to_input(config, board):
-    # Create an empty 8x8x17 tensor
+def board_to_input(config, node):
+    # Create an empty 8x8x119 tensor
+    piece_map = {'p': 0, 'n': 1, 'b': 2, 'r': 3, 'q': 4, 'k': 5}
     input_tensor = np.zeros((config.board_size, config.board_size, config.num_channels))
 
-    # Encode the current player in the first channel
-    input_tensor[:, :, 0] = (board.turn * 1.0)
-
-    # Encode the piece positions in channels 1-12
-    piece_map = {'p': 0, 'n': 1, 'b': 2, 'r': 3, 'q': 4, 'k': 5}
-    for square, piece in board.piece_map().items():
-        if piece.color == chess.WHITE:
-            piece_idx = piece.piece_type - 1
+    board_ind = 0
+    curr_board = None
+    while board_ind < 8:
+        if board_ind == 0:
+            curr_board = node.board.copy()
         else:
-            piece_idx = piece.piece_type - 1 + 6
-        input_tensor[chess.square_rank(square), chess.square_file(square), piece_idx + 1] = 1
+            if node.prior_boards[board_ind] is None:
+                break
+            else:
+                curr_board = node.prior_boards[board_ind - 1].copy()
+
+        # Encode the piece positions in channels 1-12
+        for square, piece in curr_board.piece_map().items():
+            if piece.color == chess.WHITE:
+                piece_idx = piece.piece_type - 1
+            else:
+                piece_idx = piece.piece_type - 1 + 6
+            input_tensor[chess.square_rank(square), chess.square_file(square), (board_ind * 14) + piece_idx] = 1
+
+        # repetitions
+        last_move = node.prior_moves[board_ind]
+        last_move_1 = node.prior_moves[board_ind + 2]
+        last_move_2 = node.prior_moves[board_ind + 4]
+        opp_last_move = node.prior_moves[board_ind + 1]
+        opp_last_move_1 = node.prior_moves[board_ind + 3]
+        opp_last_move_2 = node.prior_moves[board_ind + 5]
+        reps = 0
+        opp_reps = 0
+        if last_move is None:
+            pass
+        elif last_move == last_move_1:
+            if last_move_1 == last_move_2:
+                reps = 2
+            else:
+                reps = 1
+
+        if opp_last_move is None:
+            pass
+        elif opp_last_move == opp_last_move_1:
+            if opp_last_move_1 == opp_last_move_2:
+                opp_reps = 2
+            else:
+                opp_reps = 1
+
+        if curr_board.turn is True:
+            input_tensor[:, :, (board_ind * 14) + 12] = reps
+            input_tensor[:, :, (board_ind * 14) + 13] = opp_reps
+        else:
+            input_tensor[:, :, (board_ind * 14) + 12] = opp_reps
+            input_tensor[:, :, (board_ind * 14) + 13] = reps
+
+        board_ind += 1
+
+
+    # Encode the current player in the first channel
+    input_tensor[:, :, 112] = (node.board.turn * 1.0)
 
     # Encode the fullmove number in channel 14
-    input_tensor[:, :, 13] = board.fullmove_number / 100.0
+    input_tensor[:, :, 113] = node.board.fullmove_number
 
-    # Encode the halfmove clock in channel 15
-    input_tensor[:, :, 14] = board.halfmove_clock / 100.0
+    if node.prior_moves[0] is not None:
+        is_white_kingside_castle = node.prior_moves[0] == chess.Move.from_uci("e1g1")
+        is_white_queenside_castle = node.prior_moves[0] == chess.Move.from_uci("e1c1")
+        is_black_kingside_castle = node.prior_moves[0] == chess.Move.from_uci("e8g8")
+        is_black_queenside_castle = node.prior_moves[0] == chess.Move.from_uci("e8c8")
 
-    # Encode the remaining moves in channel 16
-    remaining_moves = (2 * 50) - board.fullmove_number
-    input_tensor[:, :, 15] = remaining_moves / 100.0
+        if is_white_kingside_castle:
+            input_tensor[:, :, 114] = 1
+        if is_white_queenside_castle:
+            input_tensor[:, :, 115] = 1
+        if is_black_kingside_castle:
+            input_tensor[:, :, 116] = 1
+        if is_black_queenside_castle:
+            input_tensor[:, :, 117] = 1
 
-    # Encode the remaining half-moves in channel 17
-    remaining_halfmoves = 100 - board.halfmove_clock
-    input_tensor[:, :, 16] = remaining_halfmoves / 100.0
-
-    del board
+    # Encode the "no progress" count in channel 118
+    input_tensor[:, :, 118] = node.board.halfmove_clock
 
     return input_tensor
 
@@ -333,7 +384,7 @@ class MCTSTree:
     # @profile
     def expand(self, leaf_node, network):
         # Get the policy and value from the neural network
-        state = board_to_input(self.config, leaf_node.board.copy())
+        state = board_to_input(self.config, leaf_node)
         state_expanded = np.expand_dims(state, axis=0)
 
         # Create a TensorFlow dataset using the expanded input
@@ -365,13 +416,19 @@ class MCTSTree:
         legal_probabilities /= (np.sum(legal_probabilities) + epsilon)
 
         for i, action in enumerate(legal_moves):
+            new_prior_moves = copy.deepcopy(leaf_node.prior_moves)
+            new_prior_boards = copy.deepcopy(leaf_node.prior_boards)
+            _ = new_prior_moves.pop()
+            _ = new_prior_boards.pop()
+            new_prior_moves.insert(0, action)
+            new_prior_boards.insert(0, leaf_node.board.copy())
             new_board = leaf_node.board.copy()
             new_board.push_uci(action)
             if leaf_node.player_to_move == 'white':
                 player_to_move = 'black'
             else:
                 player_to_move = 'white'
-            child = Node(new_board.copy(), name=action, player_to_move=player_to_move)
+            child = Node(new_board.copy(), name=action, player_to_move=player_to_move, prior_boards=new_prior_boards, prior_moves=new_prior_moves)
             child.set_parent(leaf_node)
             if child.board.is_game_over(claim_draw=True):
                 winner = child.board.result()
@@ -389,7 +446,7 @@ class MCTSTree:
             child.prior_prob = legal_probabilities[i]
             leaf_node.children.append(child)
 
-        del new_board, state, legal_moves
+        del new_board, state, legal_moves, new_prior_boards, new_prior_moves
         return
 
     def update_root(self, action):
@@ -546,7 +603,7 @@ def policy_to_prob_array(policy, legal_moves, all_moves_list):
 class Node:
     all_nodes = set()
 
-    def __init__(self, board, player_to_move='white', name='root'):
+    def __init__(self, board, player_to_move='white', name='root', prior_boards=None, prior_moves=None):
         self.board = board
         self.Qreward = 0
         self.Nvisit = 0
@@ -557,6 +614,12 @@ class Node:
         self.parent = None
         self.game_over = False
         self.name = name
+        if prior_boards is None:
+            self.prior_boards = [None] * 7
+            self.prior_moves = [None] * (7 + 5)
+        else:
+            self.prior_boards = prior_boards
+            self.prior_moves = prior_moves
         Node.all_nodes.add(self)
 
     def set_parent(self, parent):
@@ -573,6 +636,8 @@ class Node:
         del self.prior_value
         del self.name
         del self.player_to_move
+        del self.prior_boards
+        del self.prior_moves
         Node.all_nodes.discard(self)
 
     def get_all_nodes(self):

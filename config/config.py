@@ -7,7 +7,7 @@ class Config:
     def __init__(self, num_iterations, verbosity):
         # Board and network settings
         self.board_size = 8
-        self.num_channels = 17
+        self.num_channels = 119
         self.all_chess_moves = create_all_moves_list()
         self.self_play_games = 10000
         self.redis_host = '192.168.5.77'

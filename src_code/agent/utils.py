@@ -136,41 +136,49 @@ def malloc_trim():
 
 
 def input_to_board(input_tensor):
-    # Create a new chess board object
-    board = chess.Board()
+    piece_types = [chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN, chess.KING]
 
-    # Clear the board before setting pieces
-    board.clear()
+    def tensor_to_board(tensor_slice):
+        board = chess.Board(empty=True)
+        for rank in range(8):
+            for file in range(8):
+                for idx, piece_type in enumerate(piece_types):
+                    if tensor_slice[rank, file, idx] == 1:
+                        board.set_piece_at(chess.square(rank, file), chess.Piece(piece_type, chess.WHITE))
+                    if tensor_slice[rank, file, idx + 6] == 1:
+                        board.set_piece_at(chess.square(rank, file), chess.Piece(piece_type, chess.BLACK))
+        return board
 
-    # Decode the current player from the first channel
-    current_player = bool(input_tensor[0, 0, 0])
+    board_list = []
+    move_list = []
+    for board_ind in range(8):
+        board_slice = input_tensor[:, :, (board_ind * 14):(board_ind * 14) + 12]
+        board = tensor_to_board(board_slice)
+        board_list.append(board)
 
-    # Set the turn
-    board.turn = current_player
+        if board_ind < 7:
+            reps = input_tensor[0, 0, (board_ind * 14) + 12]
+            opp_reps = input_tensor[0, 0, (board_ind * 14) + 13]
+            move_list.append((reps, opp_reps))
 
-    # Decode the piece positions from channels 1-12
-    piece_map = {
-        (0, 0): 'P', (0, 1): 'N', (0, 2): 'B', (0, 3): 'R', (0, 4): 'Q', (0, 5): 'K',
-        (1, 0): 'p', (1, 1): 'n', (1, 2): 'b', (1, 3): 'r', (1, 4): 'q', (1, 5): 'k',
+    turn = bool(input_tensor[0, 0, 112])
+    fullmove_number = int(input_tensor[0, 0, 113])
+
+    white_kingside_castle = bool(input_tensor[0, 0, 114])
+    white_queenside_castle = bool(input_tensor[0, 0, 115])
+    black_kingside_castle = bool(input_tensor[0, 0, 116])
+    black_queenside_castle = bool(input_tensor[0, 0, 117])
+
+    halfmove_clock = int(input_tensor[0, 0, 118])
+
+    current_play_summary = {
+        "turn": turn,
+        "fullmove_number": fullmove_number,
+        "white_kingside_castle": white_kingside_castle,
+        "white_queenside_castle": white_queenside_castle,
+        "black_kingside_castle": black_kingside_castle,
+        "black_queenside_castle": black_queenside_castle,
+        "halfmove_clock": halfmove_clock,
     }
-    for rank in range(8):
-        for file in range(8):
-            for channel in range(1, 13):
-                if input_tensor[rank, file, channel] == 1:
-                    color, piece_type = divmod(channel - 1, 6)
-                    piece_symbol = piece_map[(color, piece_type)]
-                    square = chess.square(file, rank)
-                    board.set_piece_at(square, chess.Piece.from_symbol(piece_symbol))
 
-    # Decode the fullmove number from channel 13
-    fullmove_number = int(input_tensor[0, 0, 13] * 100)
-
-    # Decode the halfmove clock from channel 14
-    halfmove_clock = int(input_tensor[0, 0, 14] * 100)
-
-    # Set the fullmove number and halfmove clock on the board
-    board.fullmove_number = fullmove_number
-    board.halfmove_clock = halfmove_clock
-
-    return board
-
+    return board_list, move_list, current_play_summary

@@ -78,7 +78,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate', 'play']
-    type_id = 3
+    type_id = 1
 
     min_iterations = 800
     outer_config = Config(num_iterations=min_iterations, verbosity=False)

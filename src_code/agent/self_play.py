@@ -57,7 +57,7 @@ def play_games(pass_dict):
                 # if (agent.move_counter.count % 50) == 0:
                 #    draw_board(agent.board, display=True, verbosity=True)
             # Append the training data
-            state = board_to_input(config, agent.board)
+            state = board_to_input(config, agent.tree.root)
             states.append(state)
             moves.append(uci_move)
             policy_targets.append(policy_target)
