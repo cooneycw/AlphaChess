@@ -25,11 +25,11 @@ class Config:
         self.momentum = 0.9
         self.weight_decay = 1e-4
         self.num_iterations = num_iterations
-        self.eval_num_iterations = 200
+        self.eval_num_iterations = 800
         self.num_evaluation_games = 100
-        self.training_sample = 6000
-        self.training_samples = 12
-        self.early_stopping_epochs = 10
+        self.training_sample = 10000
+        self.training_samples = 3
+        self.early_stopping_epochs = 3
         self.reward_discount = 1.00
         self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.3  # Starting value for alpha
