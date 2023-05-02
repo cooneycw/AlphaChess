@@ -161,7 +161,7 @@ if __name__ == '__main__':
             agent_admin.save_networks('network_current')
             agent_admin.save_networks('network_backup')
         print(f'Network: {key} was not adequate.  Deleting key..')
-        #delete_redis_key(agent_admin, key)
+        delete_redis_key(agent_admin, key)
 
     elif type_list[type_id] != 'initialize' and USE_RAY is True:
 
