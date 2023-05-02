@@ -52,8 +52,8 @@ def play_games(pass_dict):
             if (agent.move_counter.count % 1) == 0 and (agent.move_counter.count > 0):
                 print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
                 print(agent.board)
-                agent.tree.width()
-                agent.tree.gather_tree_statistics()
+                # agent.tree.width()
+                # agent.tree.gather_tree_statistics()
                 # if (agent.move_counter.count % 50) == 0:
                 #    draw_board(agent.board, display=True, verbosity=True)
             # Append the training data
@@ -141,6 +141,13 @@ def play_games(pass_dict):
 
                     # Save the training data
                     save_training_data(agent, key_id, key_dict)
+
+                states = []
+                moves = []
+                policy_targets = []
+                value_targets = None
+                key_dict = None
+
 
         agent.tree = None
         agent = None
