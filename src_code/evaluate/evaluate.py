@@ -45,10 +45,10 @@ def run_evaluation(game_id, key, rand_val):
             _, _, _ = agent_current.get_action(eval=True)
             player_to_go = 'current'
 
-        print(f'\n \nCurrent node statistics:')
-        agent_current.tree.gather_tree_statistics()
-        print(f'\n \nCandidate node statistics')
-        agent_candidate.tree.gather_tree_statistics()
+        # print(f'\n \nCurrent node statistics:')
+        # agent_current.tree.gather_tree_statistics()
+        # print(f'\n \nCandidate node statistics')
+        # agent_candidate.tree.gather_tree_statistics()
 
         board.push_uci(uci_move)
         move_cnt += 1
