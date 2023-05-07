@@ -207,62 +207,78 @@ class AlphaZeroChess:
         print(f"Network weights saved to Redis key '{key_name}'")
 
 
-def board_to_input(config, node):
+def board_to_input_single(config, node):
     # Create an empty 8x8x119 tensor
     piece_map = {'p': 0, 'n': 1, 'b': 2, 'r': 3, 'q': 4, 'k': 5}
-    input_tensor = np.zeros((config.board_size, config.board_size, config.num_channels))
+    # input_tensor = np.zeros((config.board_size, config.board_size, config.num_channels))
+    input_tensor = np.zeros((config.board_size, config.board_size, 14), dtype=np.uint8)
+
+    board_ind = 0
+    curr_board = None
+    curr_board = node.board.copy()
+
+    # Encode the piece positions in channels 1-12
+    for square, piece in curr_board.piece_map().items():
+        if piece.color == chess.WHITE:
+            piece_idx = piece.piece_type - 1
+        else:
+            piece_idx = piece.piece_type - 1 + 6
+        input_tensor[chess.square_rank(square), chess.square_file(square), (board_ind * 14) + piece_idx] = 1
+
+    # repetitions
+    last_move = node.prior_moves[board_ind]
+    last_move_1 = node.prior_moves[board_ind + 2]
+    last_move_2 = node.prior_moves[board_ind + 4]
+    opp_last_move = node.prior_moves[board_ind + 1]
+    opp_last_move_1 = node.prior_moves[board_ind + 3]
+    opp_last_move_2 = node.prior_moves[board_ind + 5]
+
+    reps = 0
+    opp_reps = 0
+    if last_move is None:
+        pass
+    elif last_move == last_move_1:
+        if last_move_1 == last_move_2:
+            reps = 2
+        else:
+            reps = 1
+
+    if opp_last_move is None:
+        pass
+    elif opp_last_move == opp_last_move_1:
+        if opp_last_move_1 == opp_last_move_2:
+            opp_reps = 2
+        else:
+            opp_reps = 1
+
+    if curr_board.turn is True:
+        input_tensor[:, :, (board_ind * 14) + 12] = reps
+        input_tensor[:, :, (board_ind * 14) + 13] = opp_reps
+    else:
+        input_tensor[:, :, (board_ind * 14) + 12] = opp_reps
+        input_tensor[:, :, (board_ind * 14) + 13] = reps
+
+    return input_tensor
+
+
+def board_to_input(config, node):
+    # Create an empty 8x8x119 tensor
+    input_tensor = np.zeros((config.board_size, config.board_size, config.num_channels), dtype=np.uint8)
 
     board_ind = 0
     curr_board = None
     while board_ind < 8:
         if board_ind == 0:
-            curr_board = node.board.copy()
+            single_tensor = board_to_input_single(config, node)
+            input_tensor[:, :, 0:14] = single_tensor
         else:
             if node.prior_boards[board_ind - 1] is None:
                 break
             else:
-                curr_board = node.prior_boards[board_ind - 1].copy()
+                inds = np.arange((board_ind * 14), (14 * board_ind) + 14)
+                input_tensor[:, :, inds] = node.prior_boards[board_ind - 1]
 
         # Encode the piece positions in channels 1-12
-        for square, piece in curr_board.piece_map().items():
-            if piece.color == chess.WHITE:
-                piece_idx = piece.piece_type - 1
-            else:
-                piece_idx = piece.piece_type - 1 + 6
-            input_tensor[chess.square_rank(square), chess.square_file(square), (board_ind * 14) + piece_idx] = 1
-
-        # repetitions
-        last_move = node.prior_moves[board_ind]
-        last_move_1 = node.prior_moves[board_ind + 2]
-        last_move_2 = node.prior_moves[board_ind + 4]
-        opp_last_move = node.prior_moves[board_ind + 1]
-        opp_last_move_1 = node.prior_moves[board_ind + 3]
-        opp_last_move_2 = node.prior_moves[board_ind + 5]
-
-        reps = 0
-        opp_reps = 0
-        if last_move is None:
-            pass
-        elif last_move == last_move_1:
-            if last_move_1 == last_move_2:
-                reps = 2
-            else:
-                reps = 1
-
-        if opp_last_move is None:
-            pass
-        elif opp_last_move == opp_last_move_1:
-            if opp_last_move_1 == opp_last_move_2:
-                opp_reps = 2
-            else:
-                opp_reps = 1
-
-        if curr_board.turn is True:
-            input_tensor[:, :, (board_ind * 14) + 12] = reps
-            input_tensor[:, :, (board_ind * 14) + 13] = opp_reps
-        else:
-            input_tensor[:, :, (board_ind * 14) + 12] = opp_reps
-            input_tensor[:, :, (board_ind * 14) + 13] = reps
 
         board_ind += 1
 
@@ -289,7 +305,7 @@ def board_to_input(config, node):
             input_tensor[:, :, 117] = 1
 
     # Encode the "no progress" count in channel 118
-    input_tensor[:, :, 118] = node.board.halfmove_clock
+    input_tensor[:, :, 118] = min(255, node.board.halfmove_clock)
 
     return input_tensor
 
@@ -422,7 +438,7 @@ class MCTSTree:
             _ = new_prior_moves.pop()
             _ = new_prior_boards.pop()
             new_prior_moves.insert(0, action)
-            new_prior_boards.insert(0, leaf_node.board.copy())
+            new_prior_boards.insert(0, board_to_input_single(self.config, leaf_node))
             new_board = leaf_node.board.copy()
             new_board.push_uci(action)
             if leaf_node.player_to_move == 'white':
