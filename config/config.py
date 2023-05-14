@@ -14,7 +14,7 @@ class Config:
         self.redis_port = 6379
         self.redis_db = 0
         # Training settings
-        self.num_epochs = 15
+        self.num_epochs = 8
         self.validation_split = 0.1
         self.batch_size = 32
         self.maximum_moves = 180
@@ -28,16 +28,16 @@ class Config:
         self.eval_num_iterations = 800
         self.num_evaluation_games = 100
         self.training_sample = 10000
-        self.training_samples = 3
-        self.early_stopping_epochs = 3
+        self.training_samples = 8
+        self.early_stopping_epochs = 7
         self.reward_discount = 1.00
         self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.3  # Starting value for alpha
         self.eps = 0.25  # Starting value for eps
         self.c_puct = 1.5
         self.eval_c_puct = 1.0
-        # self.optimizer = tf.keras.optimizers.Nadam(learning_rate=0.001)
-        self.optimizer = tf.keras.optimizers.Adagrad(learning_rate=0.001)
+        self.optimizer = tf.keras.optimizers.Nadam(learning_rate=0.0005)
+        # self.optimizer = tf.keras.optimizers.Adagrad(learning_rate=0.0005)
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter
