@@ -125,7 +125,10 @@ if __name__ == '__main__':
             input_dict_list = []
             for ind in inds:
                 input_dict['eval_game_id'] = ind
-                input_dict['random_val'] = random.random()
+                if ind % 2 == 0:
+                    input_dict['random_val'] = 0.25
+                else:
+                    input_dict['random_val'] = 0.75
                 input_dict_list.append(copy.deepcopy(input_dict))
 
             results = ray.get([run_evaluation.remote(input_dict['eval_game_id'], input_dict['key'], input_dict['random_val']) for input_dict in input_dict_list])
