@@ -19,7 +19,7 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-USE_RAY = False
+USE_RAY = True
 if USE_RAY:
     NUM_WORKERS = 34
     NUM_GPUS = 0
@@ -78,9 +78,9 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate', 'play']
-    type_id = 2
+    type_id = 1
 
-    min_iterations = 800
+    min_iterations = 1600
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
 
     if type_list[type_id] == 'initialize':
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
     elif type_list[type_id] == 'evaluate':
         assert USE_RAY is True, 'USE_RAY must be True'
-        config = Config(num_iterations=800, verbosity=False)
+        config = Config(num_iterations=1600, verbosity=False)
         agent_admin = AlphaZeroChess(config)
 
         network_keys = scan_redis_for_networks(agent_admin, 'network_candidate_*')
@@ -169,7 +169,7 @@ if __name__ == '__main__':
 
     elif type_list[type_id] != 'initialize' and USE_RAY is True:
 
-        max_num_iterations = 800
+        max_num_iterations = 1600
         outer_config = Config(min_iterations, verbosity=False)
 
         start_ind = 0
