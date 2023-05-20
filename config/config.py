@@ -25,7 +25,7 @@ class Config:
         self.momentum = 0.9
         self.weight_decay = 1e-4
         self.num_iterations = num_iterations
-        self.eval_num_iterations = 1600
+        self.eval_num_iterations = 800
         self.num_evaluation_games = 100
         self.training_sample = 4000
         self.training_samples = 20

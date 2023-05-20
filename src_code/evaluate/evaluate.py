@@ -14,7 +14,7 @@ from src_code.agent.utils import get_board_piece_count, malloc_trim
 @ray.remote
 def run_evaluation(game_id, key, rand_val):
 
-    config = Config(num_iterations=1600, verbosity=False)
+    config = Config(num_iterations=800, verbosity=False)
     if rand_val < 0.5:
         player_to_go = 'current'
     else:
