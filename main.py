@@ -16,27 +16,26 @@ from src_code.evaluate.utils import scan_redis_for_networks, delete_redis_key
 from src_code.agent.utils import draw_board, get_board_piece_count, generate_game_id, \
     save_training_data, load_training_data, scan_redis_for_training_data
 
-# import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-USE_RAY = False
+USE_RAY = True
 if USE_RAY:
-    NUM_WORKERS = 34
-    NUM_GPUS = 0
+    NUM_WORKERS = 2
+    NUM_GPUS = 1
 
-    ray.init(address=None, num_cpus=NUM_WORKERS, logging_level=logging.INFO)
+    ray.init(address=None, num_cpus=NUM_WORKERS, num_gpus=NUM_GPUS, logging_level=logging.INFO)
 
 logging.getLogger('tensorflow').setLevel(logging.WARNING)
 physical_devices = tf.config.list_physical_devices('GPU')
 if len(physical_devices) > 0:
     gpu_idx = 0  # Set the index of the GPU you want to use
-    tf.config.experimental.set_virtual_device_configuration(physical_devices[gpu_idx], [
-        tf.config.experimental.VirtualDeviceConfiguration(memory_limit=4096)])  # Set the memory limit (in bytes)
+    #tf.config.experimental.set_virtual_device_configuration(physical_devices[gpu_idx], [
+        #tf.config.experimental.VirtualDeviceConfiguration(memory_limit=512)])  # Set the memory limit (in bytes)
 else:
     print('No GPUs available')
 
 
-@ray.remote
+@ray.remote(num_gpus=0.25)
 def main_ray(in_params):
     return main(in_params)
 
@@ -47,7 +46,7 @@ def main(in_params):
     num_iterations = in_params['num_iterations']
     num_evals = in_params['num_evals']
     print(f'Running the main function with type: {type}')
-    key_prefix = 'azChess_Threadripper_prod'
+    key_prefix = 'azChess_Threadripper01_prod'
 
     if type == 'create_training_data':
         game_id = generate_game_id()
@@ -78,7 +77,7 @@ def initialize(in_config):
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate', 'play']
-    type_id = 2
+    type_id = 1
 
     min_iterations = 800
     outer_config = Config(num_iterations=min_iterations, verbosity=False)
