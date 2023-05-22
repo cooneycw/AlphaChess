@@ -20,22 +20,24 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 
 USE_RAY = True
 if USE_RAY:
-    NUM_WORKERS = 2
-    NUM_GPUS = 1
+    NUM_WORKERS = 24
+    NUM_GPUS = 0
 
     ray.init(address=None, num_cpus=NUM_WORKERS, num_gpus=NUM_GPUS, logging_level=logging.INFO)
 
-logging.getLogger('tensorflow').setLevel(logging.WARNING)
+tf.get_logger().setLevel('ERROR')
 physical_devices = tf.config.list_physical_devices('GPU')
-if len(physical_devices) > 0:
+if len(tf.config.list_physical_devices('GPU')) > 0:
     gpu_idx = 0  # Set the index of the GPU you want to use
-    #tf.config.experimental.set_virtual_device_configuration(physical_devices[gpu_idx], [
-        #tf.config.experimental.VirtualDeviceConfiguration(memory_limit=512)])  # Set the memory limit (in bytes)
+    # Get the GPU device
+    gpu_device = physical_devices[gpu_idx]
+    # Set the GPU memory growth
+    tf.config.experimental.set_memory_growth(gpu_device, True)
 else:
     print('No GPUs available')
 
 
-@ray.remote(num_gpus=0.25)
+@ray.remote(num_gpus=(NUM_GPUS/(2 + NUM_WORKERS)))
 def main_ray(in_params):
     return main(in_params)
 

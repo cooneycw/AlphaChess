@@ -6,6 +6,8 @@ import copy
 import random
 import pickle
 import numpy as np
+import requests
+import json
 import tensorflow as tf
 from tensorflow import keras
 from collections import deque
@@ -95,12 +97,12 @@ class AlphaZeroChess:
 
         train_dataset = self.config.ChessDataset(train_states, train_policy, train_value)
         train_dataloader = tf.data.Dataset.from_generator(lambda: train_dataset,
-                                                          (tf.float32, tf.float32, tf.float32)).batch(
+                                                          (tf.float64, tf.float64, tf.float64)).batch(
             self.config.batch_size)
 
         val_dataset = self.config.ChessDataset(val_states, val_policy, val_value)
         val_dataloader = tf.data.Dataset.from_generator(lambda: val_dataset,
-                                                        (tf.float32, tf.float32, tf.float32)).batch(
+                                                        (tf.float64, tf.float64, tf.float64)).batch(
             self.config.batch_size)
 
         validation_loss_tot = 0
@@ -123,7 +125,7 @@ class AlphaZeroChess:
 
                 avg_train_loss += loss.numpy().mean()
                 policy_accuracy = tf.reduce_mean(
-                    tf.cast(tf.equal(tf.argmax(policy_targets, axis=1), tf.argmax(policy_preds, axis=1)), tf.float32))
+                    tf.cast(tf.equal(tf.argmax(policy_targets, axis=1), tf.argmax(policy_preds, axis=1)), tf.float64))
                 avg_train_accuracy += policy_accuracy.numpy()
                 num_train_batches += 1
 
@@ -142,7 +144,7 @@ class AlphaZeroChess:
 
                 avg_val_loss += loss.numpy().mean()
                 policy_accuracy = tf.reduce_mean(
-                    tf.cast(tf.equal(tf.argmax(policy_targets, axis=1), tf.argmax(policy_preds, axis=1)), tf.float32))
+                    tf.cast(tf.equal(tf.argmax(policy_targets, axis=1), tf.argmax(policy_preds, axis=1)), tf.float64))
                 avg_val_accuracy += policy_accuracy.numpy()
                 num_val_batches += 1
 
@@ -402,14 +404,24 @@ class MCTSTree:
     def expand(self, leaf_node, network):
         # Get the policy and value from the neural network
         state = board_to_input(self.config, leaf_node)
-        state_expanded = np.expand_dims(state, axis=0)
+        # state_list = state.tolist()  # Convert numpy array to list
+        # response = requests.post('http://192.168.5.133:8000/predict', json={'state': state_list})
+        # Check the response status code to ensure the request was successful
+        #if response.status_code == 200:
+        #    preds = response.json()
+        #    pi = np.array(preds['policy_preds'])
+        #    v = np.array(preds['value_preds'])
+        #    leaf_node.prior_value = v[0][0]
+        #    del v
+        #else:
+        #    print(f'Request failed with status code {response.status_code}')
 
-        # Create a TensorFlow dataset using the expanded input
-        state_ds = tf.data.Dataset.from_tensor_slices(state_expanded)
-        state_ds_batched = state_ds.batch(1)
-        pi, v = network.predict(state_ds_batched, verbose=0)
+        #  old_code Create a TensorFlow dataset using the expanded input
+        state_expanded = np.expand_dims(state, axis=0)
+        # state_ds = tf.data.Dataset.from_tensor_slices(state_expanded)
+        # state_ds_batched = state_ds.batch(1)
+        pi, v = network.predict(state_expanded, verbose=0)
         leaf_node.prior_value = v[0][0]
-        del v
 
         # Add Dirichlet noise to the prior probabilities
         if leaf_node.name == 'root':
@@ -426,7 +438,7 @@ class MCTSTree:
         # Create list of legal policy probabilities corresponding to legal moves
         legal_probabilities = [pi[self.config.all_chess_moves.index(move)] for move in legal_moves]
 
-        del pi
+        del v, pi
 
         # Normalize the legal probabilities to sum to 1
         epsilon = 1e-8
