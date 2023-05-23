@@ -89,17 +89,13 @@ if __name__ == '__main__':
         initialize(outer_config)
 
     if type_list[type_id] != 'initialize' and USE_RAY is False:
-        single_ind = 0
-        while single_ind < 1:
-
-            params = dict()
-            params['type'] = type_list[type_id]
-            params['num_iterations'] = min_iterations
-            params['num_evals'] = single_ind
-            params['self_play_games'] = 1
-            outcome = main(params)
-            print(f'Outcome: {single_ind} - {outcome}')
-            single_ind += 1
+        params = dict()
+        params['type'] = type_list[type_id]
+        params['num_iterations'] = min_iterations
+        params['num_evals'] = outer_config.num_evaluation_games
+        params['self_play_games'] = 1
+        outcome = main(params)
+        print(f'Outcome: {outcome}')
 
     elif type_list[type_id] == 'evaluate':
         assert USE_RAY is True, 'USE_RAY must be True'
