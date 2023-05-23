@@ -418,9 +418,9 @@ class MCTSTree:
 
         #  old_code Create a TensorFlow dataset using the expanded input
         state_expanded = np.expand_dims(state, axis=0)
-        # state_ds = tf.data.Dataset.from_tensor_slices(state_expanded)
-        # state_ds_batched = state_ds.batch(1)
-        pi, v = network.predict(state_expanded, verbose=0)
+        state_ds = tf.data.Dataset.from_tensor_slices(state_expanded)
+        state_ds_batched = state_ds.batch(1)
+        pi, v = network.predict(state_ds_batched, verbose=0)
         leaf_node.prior_value = v[0][0]
 
         # Add Dirichlet noise to the prior probabilities

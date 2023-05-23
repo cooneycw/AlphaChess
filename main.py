@@ -20,7 +20,7 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 
 USE_RAY = True
 if USE_RAY:
-    NUM_WORKERS = 24
+    NUM_WORKERS = 20
     NUM_GPUS = 0
 
     ray.init(address=None, num_cpus=NUM_WORKERS, num_gpus=NUM_GPUS, logging_level=logging.INFO)
@@ -48,7 +48,7 @@ def main(in_params):
     num_iterations = in_params['num_iterations']
     num_evals = in_params['num_evals']
     print(f'Running the main function with type: {type}')
-    key_prefix = 'azChess_Threadripper01_prod'
+    key_prefix = 'azChess_Threadripper00_prod'
 
     if type == 'create_training_data':
         game_id = generate_game_id()
