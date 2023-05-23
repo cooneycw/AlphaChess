@@ -19,10 +19,10 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 USE_RAY = True
-if USE_RAY:
-    NUM_WORKERS = 24
-    NUM_GPUS = 0
+NUM_WORKERS = 15
+NUM_GPUS = 0
 
+if USE_RAY:
     ray.init(address=None, num_cpus=NUM_WORKERS, num_gpus=NUM_GPUS, logging_level=logging.INFO)
 
 tf.get_logger().setLevel('ERROR')
@@ -37,7 +37,8 @@ else:
     print('No GPUs available')
 
 
-@ray.remote(num_gpus=(NUM_GPUS/(2 + NUM_WORKERS)))
+#@ray.remote(num_gpus=(NUM_GPUS/(2 + NUM_WORKERS)))
+@ray.remote
 def main_ray(in_params):
     return main(in_params)
 
@@ -88,13 +89,17 @@ if __name__ == '__main__':
         initialize(outer_config)
 
     if type_list[type_id] != 'initialize' and USE_RAY is False:
-        params = dict()
-        params['type'] = type_list[type_id]
-        params['num_iterations'] = min_iterations
-        params['num_evals'] = outer_config.num_evaluation_games
-        params['self_play_games'] = 1
-        outcome = main(params)
-        print(f'Outcome: {outcome}')
+        single_ind = 0
+        while single_ind < 1:
+
+            params = dict()
+            params['type'] = type_list[type_id]
+            params['num_iterations'] = min_iterations
+            params['num_evals'] = single_ind
+            params['self_play_games'] = 1
+            outcome = main(params)
+            print(f'Outcome: {single_ind} - {outcome}')
+            single_ind += 1
 
     elif type_list[type_id] == 'evaluate':
         assert USE_RAY is True, 'USE_RAY must be True'

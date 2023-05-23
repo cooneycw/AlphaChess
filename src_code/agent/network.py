@@ -23,7 +23,7 @@ def create_network(config):
     x = Conv2D(256, kernel_size=3, padding='same', name='conv1')(inputs)
     x = BatchNormalization(name='bn1')(x)
     x = Activation('relu', name='relu1')(x)
-    for i in range(20):
+    for i in range(12):
         x = residual_block(x, 256, block_idx=i+1)
 
     # Value head

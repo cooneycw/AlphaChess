@@ -20,7 +20,7 @@ def play_games(pass_dict):
     # Play the game
     for i in range(self_play_games):
         agent = AlphaZeroChess(config)
-
+        agent.load_networks('network_current')
         key_id_list = []
         states = []
         moves = []
@@ -147,7 +147,6 @@ def play_games(pass_dict):
                 policy_targets = []
                 value_targets = None
                 key_dict = None
-
 
         agent.tree = None
         agent = None

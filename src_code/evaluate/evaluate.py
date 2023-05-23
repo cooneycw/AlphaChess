@@ -23,6 +23,7 @@ def run_evaluation(game_id, key, rand_val):
     print(f'Game {game_id} Player to go: {player_to_go}')
     board = chess.Board()
     agent_current = AlphaZeroChess(config)
+    agent_current.load_networks('network_current')
     agent_candidate = AlphaZeroChess(config)
     agent_candidate.load_networks(key)
 

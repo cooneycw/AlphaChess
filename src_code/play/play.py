@@ -12,6 +12,7 @@ def play_game():
     config = Config(num_iterations=20, verbosity=True)
     # Play the game
     agent = AlphaZeroChess(config)
+    agent.load_networks('network_current')
     iters = None
     iters_choices = [None, 40, 60, 100, 200, 400, 800, 1200]
     while not agent.game_over():
