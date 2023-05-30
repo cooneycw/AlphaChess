@@ -79,9 +79,9 @@ def train_model(key_prefix, num_train_records=2000):
             break
 
     for q, keys in enumerate(list(key_del_list)):
-        # if q % 2 == 0:
-        redis_conn.delete(keys)  # disable deletion of keys
-        # pass
+        if q % 1 == 0:
+            redis_conn.delete(keys)  # disable deletion of keys
+            # pass
 
     print(f'{len(list(key_del_list))} keys deleted from redis...')
     now = datetime.datetime.now()

@@ -468,9 +468,9 @@ class MCTSTree:
                     child.prior_value = -1
                 elif winner == '1/2-1/2':
                     if child.parent.player_to_move == 'black':
-                        child.prior_value = -0.5
+                        child.prior_value = -0.25
                     elif child.parent.player_to_move == 'white':
-                        child.prior_value = 0.5
+                        child.prior_value = 0.25
 
             child.prior_prob = legal_probabilities[i]
             leaf_node.children.append(child)
@@ -630,6 +630,8 @@ def policy_to_prob_array(policy, legal_moves, all_moves_list):
 
 
 class Node:
+    __slots__ = 'board', 'Qreward', 'Nvisit', 'prior_prob', 'prior_value', 'children', 'player_to_move', \
+                'parent', 'game_over', 'name', 'prior_boards', 'prior_moves'
     all_nodes = set()
 
     def __init__(self, board, player_to_move='white', name='root', prior_boards=None, prior_moves=None):
