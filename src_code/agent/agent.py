@@ -382,14 +382,17 @@ class MCTSTree:
         for child in node.children:
             node_visits += child.Nvisit
 
-        for child_i, child in enumerate(node.children):
-            # adj only applied to Qreward (not probabilities)
-            uct = (child.Qreward * adj) + c_puct * child.prior_prob * math.sqrt(
-                node_visits + epsilon) / (1 + child.Nvisit)
+        if node_visits == 0:
+            best_node = random.choice(node.children)
+        else:
+            for child_i, child in enumerate(node.children):
+                # adj only applied to Qreward (not probabilities)
+                uct = (child.Qreward * adj) + c_puct * child.prior_prob * math.sqrt(
+                    node_visits + epsilon) / (1 + child.Nvisit)
 
-            if uct > max_uct:
-                max_uct = uct
-                best_node = child
+                if uct > max_uct:
+                    max_uct = uct
+                    best_node = child
 
         # Simulate a game from the best_node
         self.process_mcts(best_node, config, network, eval)
@@ -468,9 +471,9 @@ class MCTSTree:
                     child.prior_value = -1
                 elif winner == '1/2-1/2':
                     if child.parent.player_to_move == 'black':
-                        child.prior_value = -0.5
+                        child.prior_value = -0.25
                     elif child.parent.player_to_move == 'white':
-                        child.prior_value = 0.5
+                        child.prior_value = 0.25
 
             child.prior_prob = legal_probabilities[i]
             leaf_node.children.append(child)
@@ -630,6 +633,8 @@ def policy_to_prob_array(policy, legal_moves, all_moves_list):
 
 
 class Node:
+    __slots__ = 'board', 'Qreward', 'Nvisit', 'prior_prob', 'prior_value', 'children', 'player_to_move', \
+                'parent', 'game_over', 'name', 'prior_boards', 'prior_moves'
     all_nodes = set()
 
     def __init__(self, board, player_to_move='white', name='root', prior_boards=None, prior_moves=None):

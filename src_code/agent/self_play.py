@@ -118,9 +118,9 @@ def play_games(pass_dict):
                 elif agent.board.result(claim_draw=True) == '1/2-1/2':
                     # modify for white players
                     if player == 'white':
-                        value_target = 0.5
+                        value_target = 0.25
                     else:
-                        value_target = -0.5
+                        value_target = -0.25
                 else:
                     value_target = 0
 
