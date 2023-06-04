@@ -1,4 +1,5 @@
 import gc
+import os
 import chess
 import redis
 import math
@@ -10,6 +11,7 @@ import requests
 import json
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.python.compiler.tensorrt import trt_convert as trt
 from collections import deque
 # from line_profiler_pycharm import profile
 from src_code.agent.utils import draw_board, malloc_trim
@@ -190,8 +192,40 @@ class AlphaZeroChess:
     def save_networks(self, key_name):
         self.save_network_weights(key_name)
 
+    # def save_networks_tf(self):
+    #     current_path = os.getcwd()
+    #     model_path = os.path.join(current_path, 'model')
+    #     self.network.save(model_path, 'network_for_conversion')
+
     def load_networks(self, key_name):
         self.load_network_weights(key_name)
+        # self.save_networks_tf()
+        #
+        # # Convert the model to TensorRT
+        # conversion_params = trt.DEFAULT_TRT_CONVERSION_PARAMS
+        # conversion_params = conversion_params._replace(max_workspace_size_bytes=(1 << 32))
+        # conversion_params = conversion_params._replace(precision_mode="FP16")
+        # conversion_params = conversion_params._replace(maximum_cached_engines=100)
+        #
+        # current_path = os.getcwd()
+        # model_path = os.path.join(current_path, 'model')
+        #
+        # converter = trt.TrtGraphConverterV2(
+        #     input_saved_model_dir=model_path,  # you should save your model first
+        #     conversion_params=conversion_params
+        # )
+        #
+        # converter.convert()
+        #
+        # def input_fn():
+        #     input_shapes = [1, self.config.board_size, self.config.board_size,
+        #                     self.config.num_channels]  # replace with your input shape
+        #     yield [np.random.normal(size=input_shapes).astype(np.float32)]
+        #
+        # converter.build(input_fn)
+        #
+        # # The converted function that is used for inference
+        # self.network = converter.converted_call
 
     def save_network_weights(self, key_name):
         # Convert the weights to a dictionary

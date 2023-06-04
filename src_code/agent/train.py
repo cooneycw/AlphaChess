@@ -46,7 +46,7 @@ def train_model(key_prefix, num_train_records=2000):
         win_abs_ratio = np.sum(np.abs([train_value[i] for i in random_train_inds])) / len(random_train_inds)
         win_ratio = np.sum([train_value[i] for i in random_train_inds]) / len(random_train_inds)
 
-        print(f'Sample: {j+1} of {config.training_samples}  Loaded {len(random_train_inds)} training records and {len(random_val_inds)} validation records')
+        print(f'Sample: {j+1} of {config.training_samples}  Sampled {len(random_train_inds)} training records and {len(random_val_inds)} validation records')
         print(f'Sum of values: {np.sum([train_value[i] for i in random_train_inds])}  Win Absolute Ratio: {int(100 * (0.005 + win_abs_ratio))}%  Win Ratio: {int(100 * (0.005 + win_ratio))}%')
 
         validation_loss_tot, validation_loss_cnt = agent.update_network([train_states[i] for i in random_train_inds],
@@ -79,7 +79,7 @@ def train_model(key_prefix, num_train_records=2000):
             break
 
     for q, keys in enumerate(list(key_del_list)):
-        if q % 2 == 0:
+        if q % 1 == 0:
             redis_conn.delete(keys)  # disable deletion of keys
             # pass
 

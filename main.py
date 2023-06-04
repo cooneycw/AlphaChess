@@ -19,7 +19,7 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 USE_RAY = True
-NUM_WORKERS = 34
+NUM_WORKERS = 10
 NUM_GPUS = 0
 
 if USE_RAY:
