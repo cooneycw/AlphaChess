@@ -8,6 +8,7 @@ import gc
 import sys
 import tensorflow as tf
 from config.config import Config, interpolate
+from src_code.utils.utils import get_non_local_ip
 from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
 from src_code.agent.self_play import play_games
 from src_code.agent.train import train_model
@@ -45,11 +46,10 @@ if __name__ == '__main__':
     @ray.remote
     def worker_function():
         # Your worker logic here
-        ray_worker_id = ray.worker.global_worker.worker_id.hex()
+        ray_worker_id = get_non_local_ip()
         message = f"Hello from worker: {ray_worker_id}"
 
         return message
-
 
     # Create a list to store the remote workers
     workers = []
