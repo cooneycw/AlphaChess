@@ -19,13 +19,12 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
     save_training_data, load_training_data, scan_redis_for_training_data
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# ray start --head --num-cpus 16 --num-gpus 1 --dashboard-host 0.0.0.0
 
 USE_RAY = True
-NUM_WORKERS = 10
-NUM_GPUS = 1
 
 if USE_RAY:
-    ray.init(num_cpus=NUM_WORKERS, num_gpus=NUM_GPUS, logging_level=logging.INFO)
+    ray.init(logging_level=logging.INFO)
 
 
 tf.get_logger().setLevel('ERROR')
