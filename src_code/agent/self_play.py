@@ -15,6 +15,7 @@ def play_games(pass_dict):
     game_id = pass_dict['game_id']
     verbosity = pass_dict['verbosity']
     learning_rate = pass_dict['learning_rate']
+    network_name = pass_dict['network_name']
     config = Config(verbosity=verbosity)
     config.update_train_rate(learning_rate)
 
@@ -22,7 +23,7 @@ def play_games(pass_dict):
     # Play the game
     # Initialize the agent
     agent = AlphaZeroChess(config)
-    agent.load_networks('network_latest')
+    agent.load_networks(network_name)
     key_id_list = []
     states = []
     moves = []

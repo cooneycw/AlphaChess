@@ -29,8 +29,8 @@ def initialize(in_config):
     outer_agent.save_networks('network_current')
 
 
-@ray.remote
-def main_ray(in_params):
+@ray.remote(num_gpus=0)
+def main_ray_no_gpu(in_params):
     return main(in_params)
 
 
@@ -49,7 +49,6 @@ if __name__ == '__main__':
     # play seed games
     outer_agent = AlphaZeroChess(outer_config, network=None)
     outer_agent.load_networks('network_current')
-    outer_agent.save_networks('network_latest')
 
     start_ind = 0
     learning_rate = 0.2
@@ -65,10 +64,11 @@ if __name__ == '__main__':
             params_item['action'] = 'play'
             params_item['verbosity'] = verbosity
             params_item['learning_rate'] = learning_rate
+            params_item['network_name'] = 'network_current'
             params_item['game_id'] = ind
             params_list.append(params_item)
 
-        results = [main_ray.remote(params_list[j]) for j in range(len(inds))]
+        results = [main_ray_no_gpu.remote(params_list[j]) for j in range(len(inds))]
 
         # Wait for all tasks to complete and get the results
         output = ray.get(results)
