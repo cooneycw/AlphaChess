@@ -1,17 +1,29 @@
 import gc
 import datetime
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import tensorflow as tf
 # from line_profiler_pycharm import profile
 from config.config import Config
-from src_code.utils.utils import tensorflow_init
 from src_code.agent.agent import AlphaZeroChess, Node
 from src_code.agent.agent import board_to_input, draw_board
 from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, \
     malloc_trim, print_variable_sizes_pympler, get_size, input_to_board
 
+tf.get_logger().setLevel('ERROR')
+physical_devices = tf.config.list_physical_devices('GPU')
+if len(tf.config.list_physical_devices('GPU')) > 0:
+    gpu_idx = 0  # Set the index of the GPU you want to use
+    # Get the GPU device
+    gpu_device = physical_devices[gpu_idx]
+    # Set the GPU memory growth
+    tf.config.experimental.set_memory_growth(gpu_device, True)
+else:
+    print('No GPUs available')
+
 
 # @profile
 def play_games(pass_dict):
-    tensorflow_init()
     game_id = pass_dict['game_id']
     verbosity = pass_dict['verbosity']
     learning_rate = pass_dict['learning_rate']
