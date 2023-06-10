@@ -128,7 +128,7 @@ if __name__ == '__main__':
                     params_item['game_id'] = ind
 
                     print(f'Starting game {pre_eval_ind} of {outer_config.eval_cycles}')
-                    result_id = main_ray_no_gpu.remote(list(params_item))
+                    result_id = main_ray_no_gpu.remote(params_item)
                     pre_eval_results.append(result_id)
                     break
                 else:
