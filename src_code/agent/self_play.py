@@ -58,7 +58,7 @@ def play_games(pass_dict):
         #
         agent.board.push_uci(uci_move)
 
-        key_id = f'{game_id}_{agent.move_counter.count}_{datetime.datetime.now()}'
+        key_id = f'azChess_{game_id}_{agent.move_counter.count}_{datetime.datetime.now()}'
         key_id_list.append(key_id)
         # Print the board
         print(f'{network_name} - {agent.move_counter.count} move was: {uci_move}')
