@@ -44,10 +44,11 @@ if __name__ == '__main__':
     verbosity = False
 
     outer_config = Config(verbosity=verbosity)
-    initialize(outer_config)
 
     # play seed games
     outer_agent = AlphaZeroChess(outer_config, network=None)
+    outer_agent.redis.flushdb()
+    initialize(outer_config)
     outer_agent.load_networks('network_current')
 
     start_ind = 0
