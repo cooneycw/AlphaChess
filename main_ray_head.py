@@ -19,8 +19,9 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
     save_training_data, load_training_data, scan_redis_for_training_data
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-# ray start --head --num-cpus 16 --num-gpus 1 --dashboard-host 0.0.0.0
-
+# conda activate alphatf
+# ray start --head --num-cpus 10 --num-gpus 1 --dashboard-host 0.0.0.0
+# ray start --address='192.168.5.132:6379'
 USE_RAY = True
 
 if USE_RAY:
