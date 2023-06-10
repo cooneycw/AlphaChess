@@ -118,7 +118,6 @@ if __name__ == '__main__':
                 # Calculate the total number of currently running worker jobs across all nodes.
                 total_jobs = sum(len(node['Workers']) for node in nodes if 'Workers' in node)
 
-                params_list = []
                 if num_workers > total_jobs:
                     params_item = dict()
                     params_item['action'] = 'play'
@@ -126,9 +125,10 @@ if __name__ == '__main__':
                     params_item['learning_rate'] = learning_rate
                     params_item['network_name'] = network_name_out
                     params_item['game_id'] = ind
-                    params_list.append(params_item)
+
                     print(f'Starting game {pre_eval_ind} of {outer_config.eval_cycles}')
-                    pre_eval_results.append(main_ray_no_gpu.remote(params_list[j]) for j in range(len(params_list)))
+                    result_id = main_ray_no_gpu.remote(list(params_item))
+                    pre_eval_results.append(result_id)
                 else:
                     print(f'{total_jobs} of {num_workers} workers busy...waiting to start job')
                     time.time.sleep(5)
