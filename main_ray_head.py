@@ -116,7 +116,7 @@ if __name__ == '__main__':
             while True:
                 nodes = ray.nodes()
                 # Calculate the total number of currently running worker jobs across all nodes.
-                total_jobs = sum(len(node['Workers']) for node in nodes)
+                total_jobs = sum(len(node['Workers']) for node in nodes if 'Workers' in node)
 
                 params_list = []
                 if num_workers > total_jobs:
