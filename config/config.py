@@ -4,7 +4,7 @@ import tensorflow as tf
 
 
 class Config:
-    def __init__(self, num_iterations, verbosity):
+    def __init__(self, verbosity):
         # Board and network settings
         self.board_size = 8
         self.num_channels = 119
@@ -21,13 +21,12 @@ class Config:
         self.temperature = 1
         self.min_temperature = 0.01
         self.temperature_threshold = 150
-        self.learning_rate = 0.01
-        self.momentum = 0.9
-        self.weight_decay = 1e-4
-        self.num_iterations = num_iterations
+        self.initial_seed_games = 50
+        self.game_keys_limit = 700000
+        self.num_iterations = 800
         self.eval_num_iterations = 800
-        self.num_evaluation_games = 100
-        self.training_sample = 66800
+        self.num_evaluation_games = 400
+        self.training_sample = 4096
         self.training_samples = 1
         self.early_stopping_epochs = 1
         self.reward_discount = 1.00
@@ -44,6 +43,8 @@ class Config:
         self.game_counter = GameCounter()
         self.ChessDataset = ChessDataset
 
+    def update_train_rate(self, learning_rate):
+        self.optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
 
 def create_all_moves_list():
     all_moves_list = []

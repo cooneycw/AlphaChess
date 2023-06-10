@@ -11,143 +11,139 @@ from src_code.agent.utils import get_board_piece_count, save_training_data, get_
 # @profile
 def play_games(pass_dict):
     game_id = pass_dict['game_id']
-    key_prefix = pass_dict['key_prefix']
-    num_iterations = pass_dict['num_iterations']
-    self_play_games = pass_dict['self_play_games']
-    # Initialize the config and agent
-    config = Config(num_iterations, verbosity=False)
+    config = pass_dict['config']
 
     # Play the game
-    for i in range(self_play_games):
-        agent = AlphaZeroChess(config)
-        agent.load_networks('network_current')
-        key_id_list = []
-        states = []
-        moves = []
-        policy_targets = []
-        game_limit_stop = False
-        # training loop:
-        while not agent.game_over() and not game_limit_stop:
-            # Get the current state of the board
-            player = 'white' if agent.board.turn else 'black'
-            uci_move, policy, policy_target = agent.get_action()
+    # Initialize the agent
+    agent = AlphaZeroChess(config)
+    agent.load_networks('network_latest')
+    key_id_list = []
+    states = []
+    moves = []
+    policy_targets = []
+    game_limit_stop = False
+    # training loop:
+    while not agent.game_over() and not game_limit_stop:
+        # Get the current state of the board
+        player = 'white' if agent.board.turn else 'black'
+        uci_move, policy, policy_target = agent.get_action()
 
-            # agent.tree.root.count_nodes()
-            # print(f'Global variables: {print_variable_sizes_pympler(globals())}')
-            # print(f'Local variables: {print_variable_sizes_pympler(locals())}')
+        # agent.tree.root.count_nodes()
+        # print(f'Global variables: {print_variable_sizes_pympler(globals())}')
+        # print(f'Local variables: {print_variable_sizes_pympler(locals())}')
 
-            # Take the action and update the board state
-            # print(uci_move)
-            # if player == 'black':
-            #     uci_move = input()
-            #
-            agent.board.push_uci(uci_move)
+        # Take the action and update the board state
+        # print(uci_move)
+        # if player == 'black':
+        #     uci_move = input()
+        #
+        agent.board.push_uci(uci_move)
 
-            key_id = f'{key_prefix}_{game_id}_{agent.move_counter.count}_{datetime.datetime.now()}'
-            key_id_list.append(key_id)
-            # Print the board
-            print(f'The {agent.move_counter.count} move was: {uci_move}')
-            if agent.move_counter.count > agent.temperature_threshold:
-                agent.update_temperature()
-            if (agent.move_counter.count % 1) == 0 and (agent.move_counter.count > 0):
-                print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
-                print(agent.board)
-                # agent.tree.width()
-                # agent.tree.gather_tree_statistics()
-                # if (agent.move_counter.count % 50) == 0:
-                #    draw_board(agent.board, display=True, verbosity=True)
-            # Append the training data
-            state = board_to_input(config, agent.tree.root)
-            states.append(state)
-            moves.append(uci_move)
-            policy_targets.append(policy_target)
+        key_id = f'{game_id}_{agent.move_counter.count}_{datetime.datetime.now()}'
+        key_id_list.append(key_id)
+        # Print the board
+        print(f'The {agent.move_counter.count} move was: {uci_move}')
+        if agent.move_counter.count > agent.temperature_threshold:
+            agent.update_temperature()
+        if (agent.move_counter.count % 1) == 0 and (agent.move_counter.count > 0):
+            print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
+            print(agent.board)
+            # agent.tree.width()
+            # agent.tree.gather_tree_statistics()
+            # if (agent.move_counter.count % 50) == 0:
+            #    draw_board(agent.board, display=True, verbosity=True)
+        # Append the training data
+        state = board_to_input(config, agent.tree.root)
+        states.append(state)
+        moves.append(uci_move)
+        policy_targets.append(policy_target)
 
-            # Update the tree
-            old_node_list = agent.tree.root.get_all_nodes()
-            agent.tree.update_root(uci_move)
-            new_node_list = agent.tree.root.get_all_nodes()
-            agent.tree.root.count_nodes()
+        # Update the tree
+        old_node_list = agent.tree.root.get_all_nodes()
+        agent.tree.update_root(uci_move)
+        new_node_list = agent.tree.root.get_all_nodes()
+        agent.tree.root.count_nodes()
 
-            for abandoned_node in set(old_node_list).difference(set(new_node_list)):
-                abandoned_node.remove_from_all_nodes()
-                del abandoned_node
+        for abandoned_node in set(old_node_list).difference(set(new_node_list)):
+            abandoned_node.remove_from_all_nodes()
+            del abandoned_node
 
-            del old_node_list, new_node_list
+        del old_node_list, new_node_list
 
-            # objgraph.show_refs(agent.tree.root, filename=f'/home/cooneycw/root_refs.png')
-            # objgraph.show_refs(agent.tree.network, filename=f'/home/cooneycw/network_refs.png')
-            # objgraph.show_backrefs(agent.tree.root, filename=f'/home/cooneycw/root_backrefs.png')
-            # objgraph.show_backrefs(agent.tree.network, filename=f'/home/cooneycw/network_backrefs.png')
+        # objgraph.show_refs(agent.tree.root, filename=f'/home/cooneycw/root_refs.png')
+        # objgraph.show_refs(agent.tree.network, filename=f'/home/cooneycw/network_refs.png')
+        # objgraph.show_backrefs(agent.tree.root, filename=f'/home/cooneycw/root_backrefs.png')
+        # objgraph.show_backrefs(agent.tree.network, filename=f'/home/cooneycw/network_backrefs.png')
 
-            # objects = gc.get_objects()
-            # print(f'Objects: {len(objects)}')
-            #
-            # # create a list of tuples containing each object and its size
-            # obj_sizes = [(obj, sys.getsizeof(obj)) for obj in objects]
-            #
-            # # sort the list of tuples by the size of the objects
-            # obj_sizes.sort(key=lambda x: x[1], reverse=True)
-            #
-            # # display the top 100 objects by size
-            # for obj, size in obj_sizes[:100]:
-            #     print(type(obj), size)
-            #
-            # list_objects = [obj for obj in gc.get_objects() if isinstance(obj, list)]
-            # node_objects = [obj for obj in gc.get_objects() if isinstance(obj, Node)]
-            #
-            # print(f'Number of lists: {len(list_objects)}')
-            # print(f'Number of nodes: {len(node_objects)}')
-            #
-            # del list_objects, node_objects, objects, size, obj_sizes, obj
-            gc.collect()
-            malloc_trim()
-            agent.move_counter.increment()
-
-            # Print the result of the game
-            if agent.game_over() or agent.move_counter.count > config.maximum_moves:
-                print(f'Game Over! Winner is {agent.board.result()}')
-                if agent.move_counter.count > config.maximum_moves:
-                    game_limit_stop = True
-                # add the value outcomes to the training data
-                value_target = None
-
-                if agent.board.result(claim_draw=True) == '1-0':
-                    value_target = 1
-                elif agent.board.result(claim_draw=True) == '0-1':
-                    value_target = -1
-                elif agent.board.result(claim_draw=True) == '1/2-1/2':
-                    # modify for white players
-                    if player == 'white':
-                        value_target = 0.25
-                    else:
-                        value_target = -0.25
-                else:
-                    value_target = 0
-
-                value_targets = [value_target * config.reward_discount ** (len(policy_targets) - (i+1)) for i in range(len(policy_targets))]
-
-                # Update the game counter
-                config.game_counter.increment()
-
-                for j, key_id in enumerate(key_id_list):
-                    key_dict = dict()
-                    key_dict['key'] = key_id
-                    key_dict['game_id'] = game_id
-                    key_dict['move_id'] = j
-                    key_dict['state'] = states[j]
-                    key_dict['move'] = moves[j]
-                    key_dict['policy_target'] = policy_targets[j]
-                    key_dict['value_target'] = value_targets[j]
-
-                    # Save the training data
-                    save_training_data(agent, key_id, key_dict)
-
-                states = []
-                moves = []
-                policy_targets = []
-                value_targets = None
-                key_dict = None
-
-        agent.tree = None
-        agent = None
+        # objects = gc.get_objects()
+        # print(f'Objects: {len(objects)}')
+        #
+        # # create a list of tuples containing each object and its size
+        # obj_sizes = [(obj, sys.getsizeof(obj)) for obj in objects]
+        #
+        # # sort the list of tuples by the size of the objects
+        # obj_sizes.sort(key=lambda x: x[1], reverse=True)
+        #
+        # # display the top 100 objects by size
+        # for obj, size in obj_sizes[:100]:
+        #     print(type(obj), size)
+        #
+        # list_objects = [obj for obj in gc.get_objects() if isinstance(obj, list)]
+        # node_objects = [obj for obj in gc.get_objects() if isinstance(obj, Node)]
+        #
+        # print(f'Number of lists: {len(list_objects)}')
+        # print(f'Number of nodes: {len(node_objects)}')
+        #
+        # del list_objects, node_objects, objects, size, obj_sizes, obj
         gc.collect()
+        malloc_trim()
+        agent.move_counter.increment()
+
+        # Print the result of the game
+        if agent.game_over() or agent.move_counter.count > config.maximum_moves:
+            print(f'Game Over! Winner is {agent.board.result()}')
+            if agent.move_counter.count > config.maximum_moves:
+                game_limit_stop = True
+            # add the value outcomes to the training data
+            value_target = None
+
+            if agent.board.result(claim_draw=True) == '1-0':
+                value_target = 1
+            elif agent.board.result(claim_draw=True) == '0-1':
+                value_target = -1
+            elif agent.board.result(claim_draw=True) == '1/2-1/2':
+                # modify for white players
+                if player == 'white':
+                    value_target = 0.25
+                else:
+                    value_target = -0.25
+            else:
+                value_target = 0
+
+            value_targets = [value_target * config.reward_discount ** (len(policy_targets) - (i+1)) for i in range(len(policy_targets))]
+
+            # Update the game counter
+            config.game_counter.increment()
+
+            for j, key_id in enumerate(key_id_list):
+                key_dict = dict()
+                key_dict['key'] = key_id
+                key_dict['game_id'] = game_id
+                key_dict['move_id'] = j
+                key_dict['state'] = states[j]
+                key_dict['move'] = moves[j]
+                key_dict['policy_target'] = policy_targets[j]
+                key_dict['value_target'] = value_targets[j]
+
+                # Save the training data
+                save_training_data(agent, key_id, key_dict)
+
+            states = []
+            moves = []
+            policy_targets = []
+            value_targets = None
+            key_dict = None
+
+    agent.tree = None
+    agent = None
+    gc.collect()

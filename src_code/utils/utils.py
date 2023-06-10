@@ -1,4 +1,5 @@
 import netifaces
+import ray
 
 
 def get_non_local_ip():
@@ -11,3 +12,8 @@ def get_non_local_ip():
                 if ip_address != '127.0.0.1':
                     return ip_address
     return "Unknown"
+
+
+def total_cpu_workers():
+    resources = ray.cluster_resources()
+    return resources['CPU']
