@@ -92,12 +92,13 @@ if __name__ == '__main__':
 
     agent_ind = 0
     while agent_ind < outer_config.eval_cycles:
-        if agent_ind % 7 == 0:
+        if agent_ind % 7 == 0 and agent_ind != 0:
             learning_rate = learning_rate * 0.1
         print(f'Executing train / game play iteration: {agent_ind} of {outer_config.eval_cycles}')
         pre_eval_ind = 0
         pre_eval_results = []
         while pre_eval_ind < outer_config.train_play_games:
+            print(f'Executing post-train self play iteration: {pre_eval_ind} of {outer_config.train_play_games}')
             if pre_eval_ind == 0:
                 network_name = 'network_current'
             else:
@@ -125,7 +126,7 @@ if __name__ == '__main__':
                     params_item['verbosity'] = verbosity
                     params_item['learning_rate'] = learning_rate
                     params_item['network_name'] = network_name_out
-                    params_item['game_id'] = ind
+                    params_item['game_id'] = pre_eval_ind
 
                     print(f'Starting game {pre_eval_ind} of {outer_config.eval_cycles}')
                     result_id = main_ray_no_gpu.remote(params_item)
