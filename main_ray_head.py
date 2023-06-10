@@ -128,7 +128,7 @@ if __name__ == '__main__':
                     params_item['network_name'] = network_name_out
                     params_item['game_id'] = pre_eval_ind
 
-                    print(f'Starting game {pre_eval_ind} of {outer_config.eval_cycles}')
+                    print(f'Starting game {pre_eval_ind} of {outer_config.train_play_games}')
                     result_id = main_ray_no_gpu.remote(params_item)
                     pre_eval_results.append(result_id)
                     break
@@ -144,6 +144,7 @@ if __name__ == '__main__':
 
         eval_params = dict()
         eval_params['action'] = 'evaluate'
+        eval_params['verbosity'] = verbosity
         eval_params['eval_game_id'] = None
         eval_params['random_val'] = None
         eval_params['network_current'] = 'network_current'
@@ -172,7 +173,7 @@ if __name__ == '__main__':
                     eval_params['random_val'] = 0.75
                 eval_params_list.append(copy.deepcopy(eval_params))
 
-            results = ray.get([main_ray_no_gpu.remote(eval_params[j]) for j in len(eval_params_list)])
+            results = ray.get([main_ray_no_gpu.remote(eval_param) for eval_param in eval_params_list])
 
             for result in results:
                 game_cnt += 1
