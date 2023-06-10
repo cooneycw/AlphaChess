@@ -14,18 +14,20 @@ class Config:
         self.redis_db = 0
         # Training settings
         self.num_epochs = 1
-        self.validation_split = 0.05
+        self.validation_split = 0.1
         self.batch_size = 32
-        self.maximum_moves = 180
+        self.maximum_moves = 10
         self.temperature = 1
         self.min_temperature = 0.01
         self.temperature_threshold = 150
         self.initial_seed_games = 100
+        self.train_play_games = 10
+        self.eval_cycles = 30
         self.game_keys_limit = 700000
-        self.num_iterations = 800
-        self.eval_num_iterations = 800
-        self.num_evaluation_games = 400
-        self.training_sample = 4096
+        self.num_iterations = 400
+        self.eval_num_iterations = 400
+        self.num_evaluation_games = 4
+        self.training_sample = 460
         self.training_samples = 1
         self.early_stopping_epochs = 1
         self.reward_discount = 1.00
@@ -44,6 +46,7 @@ class Config:
 
     def update_train_rate(self, learning_rate):
         self.optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
+
 
 def create_all_moves_list():
     all_moves_list = []

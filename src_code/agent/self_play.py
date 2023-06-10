@@ -61,11 +61,11 @@ def play_games(pass_dict):
         key_id = f'{game_id}_{agent.move_counter.count}_{datetime.datetime.now()}'
         key_id_list.append(key_id)
         # Print the board
-        print(f'The {agent.move_counter.count} move was: {uci_move}')
+        print(f'{network_name} - {agent.move_counter.count} move was: {uci_move}')
         if agent.move_counter.count > agent.temperature_threshold:
             agent.update_temperature()
         if (agent.move_counter.count % 1) == 0 and (agent.move_counter.count > 0):
-            print(f'Piece count (white / black): {get_board_piece_count(agent.board)}')
+            print(f'{network_name} - Piece count (white / black): {get_board_piece_count(agent.board)}')
             print(agent.board)
             # agent.tree.width()
             # agent.tree.gather_tree_statistics()

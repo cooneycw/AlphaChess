@@ -11,10 +11,14 @@ from src_code.agent.agent import AlphaZeroChess, board_to_input, Node
 from src_code.agent.utils import get_board_piece_count, malloc_trim
 
 
-@ray.remote
-def run_evaluation(game_id, key, rand_val):
+def run_evaluation(in_params):
+    verbosity = in_params['verbosity']
+    rand_val = in_params['rand_val']
+    game_id = in_params['eval_game_id']
+    network_current = in_params['network_current']
+    network_candidate = in_params['network_candidate']
 
-    config = Config(num_iterations=800, verbosity=False)
+    config = Config(verbosity=verbosity)
     if rand_val < 0.5:
         player_to_go = 'current'
     else:
@@ -23,9 +27,9 @@ def run_evaluation(game_id, key, rand_val):
     print(f'Game {game_id} Player to go: {player_to_go}')
     board = chess.Board()
     agent_current = AlphaZeroChess(config)
-    agent_current.load_networks('network_current')
+    agent_current.load_networks(network_current)
     agent_candidate = AlphaZeroChess(config)
-    agent_candidate.load_networks(key)
+    agent_candidate.load_networks(network_candidate)
 
     out_params = dict()
 

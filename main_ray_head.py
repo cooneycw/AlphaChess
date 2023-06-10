@@ -6,6 +6,7 @@ import copy
 import random
 import gc
 import sys
+import time
 from config.config import Config
 from src_code.utils.utils import total_cpu_workers, total_gpu_workers
 from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
@@ -34,9 +35,18 @@ def main_ray_no_gpu(in_params):
     return main(in_params)
 
 
+@ray.remote(num_gpus=1)
+def main_ray_gpu(in_params):
+    return main(in_params)
+
+
 def main(in_params):
     if in_params['action'] == 'play':
         play_games(in_params)
+    elif in_params['action'] == 'train':
+        train_model(in_params)
+    elif in_params['action'] == 'evaluate':
+        run_evaluation(in_params)
 
 
 if __name__ == '__main__':
@@ -51,6 +61,7 @@ if __name__ == '__main__':
     initialize(outer_config)
     outer_agent.load_networks('network_current')
 
+    print(f'Creating initial seed game data for training base.')
     start_ind = 0
     learning_rate = 0.2
     num_workers = int(total_cpu_workers())
@@ -78,5 +89,122 @@ if __name__ == '__main__':
         for i, result in enumerate(output):
             print(f'Task {i} output: {result}')
             start_ind += 1
+
+    agent_ind = 0
+    while agent_ind < outer_config.eval_cycles:
+        print(f'Executing train / game play iteration: {agent_ind} of {outer_config.eval_cycles}')
+        pre_eval_ind = 0
+        pre_eval_results = []
+        while pre_eval_ind < outer_config.train_play_games:
+            if pre_eval_ind == 0:
+                network_name = 'network_current'
+            else:
+                network_name = 'network_current' + '_' + str(pre_eval_ind-1).zfill(5)
+            network_name_out = network_name + '_' + str(pre_eval_ind).zfill(5)
+            train_params = dict()
+            train_params['action'] = 'train'
+            train_params['verbosity'] = verbosity
+            train_params['network_name'] = network_name
+            train_params['network_name_out'] = network_name_out
+            main(train_params)
+
+            # test number of ray workers / jobs currently running
+            num_workers = int(total_cpu_workers())
+            while True:
+                nodes = ray.nodes()
+                # Calculate the total number of currently running worker jobs across all nodes.
+                total_jobs = sum(len(node['Workers']) for node in nodes)
+
+                params_list = []
+                if num_workers > total_jobs:
+                    params_item = dict()
+                    params_item['action'] = 'play'
+                    params_item['verbosity'] = verbosity
+                    params_item['learning_rate'] = learning_rate
+                    params_item['network_name'] = network_name_out
+                    params_item['game_id'] = ind
+                    params_list.append(params_item)
+                    print(f'Starting game {pre_eval_ind} of {outer_config.eval_cycles}')
+                    pre_eval_results.append(main_ray_no_gpu.remote(params_list[j]) for j in range(len(params_list)))
+                else:
+                    print(f'{total_jobs} of {num_workers} workers busy...waiting to start job')
+                    time.time.sleep(5)
+
+                if len(pre_eval_results) > outer_config.train_play_games:
+                    break
+                pre_eval_ind += 1
+
+            results = [ray.get(result) for result in pre_eval_results]
+            print(f'Self play completed.  Initiating evaluation process using {outer_config.num_evaluation_games} games.')
+
+            eval_params = dict()
+            eval_params['action'] = 'evaluate'
+            eval_params['eval_game_id'] = None
+            eval_params['random_val'] = None
+            eval_params['network_current'] = 'network_current'
+            eval_params['network_candidate'] = network_name_out
+
+            challenger_wins = 0
+            challenger_white_wins = 0
+            challenger_black_wins = 0
+            challenger_losses = 0
+            challenger_draws = 0
+            challenger_white_games = 0
+            challenger_black_games = 0
+
+            game_cnt = 0
+            max_evals = outer_config.num_evaluation_games
+            i = 0
+            num_workers = int(total_cpu_workers())
+            while i < max_evals:
+                inds = [x for x in range(i, min(i + num_workers, max_evals))]
+                eval_params_list = []
+                for ind in inds:
+                    eval_params['eval_game_id'] = ind
+                    if ind % 2 == 0:
+                        eval_params['random_val'] = 0.25
+                    else:
+                        eval_params['random_val'] = 0.75
+                    eval_params_list.append(copy.deepcopy(eval_params))
+
+                results = ray.get([main_ray_no_gpu.remote(eval_params[j]) for j in len(eval_params_list)])
+
+                for result in results:
+                    game_cnt += 1
+                    i += 1
+                    if result['player_to_go'] == 'candidate':
+                        challenger_white_games += 1
+                        challenger_white_wins += result['challenger_wins']
+                    else:
+                        challenger_black_games += 1
+                        challenger_black_wins += result['challenger_wins']
+                    challenger_wins += result['challenger_wins']
+                    challenger_losses += result['challenger_losses']
+                    challenger_draws += result['challenger_draws']
+
+                if (game_cnt - challenger_draws) == 0:
+                    print(f'Games: {game_cnt} Wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
+                else:
+                    print(f'Challenger wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
+                    print(f'Challenger white wins: {challenger_white_wins} of {challenger_white_games}')
+                    print(f'Challenger black wins: {challenger_black_wins} of {challenger_black_games}')
+                    print(f'Games: {game_cnt} Win/lose ratio: {0.1 * (int(0.5 + 1000 * challenger_wins / (game_cnt - challenger_draws)))}% ')
+
+                gc_list = gc.get_objects()
+
+            if (challenger_wins / (game_cnt - challenger_draws)) >= 0.55:
+                print(f'Challenger won {0.1 * (int(0.5 + 1000 * challenger_wins / game_cnt))}% of the games')
+                outer_agent.load_networks('network_current')
+                outer_agent.save_networks('network_previous')
+                outer_agent.load_networks(network_name_out)
+                outer_agent.save_networks('network_current')
+                outer_agent.save_networks('network_backup')
+            else:
+                print(f'Network: {network_name_out} was not adequate.  Deleting keys..')
+                for k in range(0, outer_config.train_play_games):
+                    key = network_name + '_' + str(k).zfill(5)
+                    delete_redis_key(outer_agent, key)
+
+        agent_ind += 1
 
     ray.shutdown()

@@ -8,13 +8,16 @@ from src_code.agent.agent import AlphaZeroChess
 from src_code.agent.utils import scan_redis_for_training_data, load_training_data
 
 
-def train_model(key_prefix, num_train_records=2000):
-    config = Config(num_iterations=None, verbosity=False)
+def train_model(pass_dict):
+    network_name = pass_dict['network_name']
+    network_name_out = pass_dict['network_name_out']
+    verbosity = pass_dict['verbosity']
+    config = Config(verbosity=verbosity)
     agent = AlphaZeroChess(config)
     redis_conn = redis.Redis(host=config.redis_host, port=config.redis_port, db=config.redis_db)
 
-    agent.load_networks('network_current')
-    key_list = scan_redis_for_training_data(agent, key_prefix[0:7])
+    agent.load_networks(network_name)
+    key_list = scan_redis_for_training_data(agent, 'azChess')
     # Get a list of keys and shuffle them
 
     retrieved_data = []
@@ -78,23 +81,24 @@ def train_model(key_prefix, num_train_records=2000):
             print(f"Early stopping triggered at training episode {j}")
             break
 
-    for q, keys in enumerate(list(key_del_list)):
-        if q % 1 == 0:
-            redis_conn.delete(keys)  # disable deletion of keys
-            # pass
-
-    print(f'{len(list(key_del_list))} keys deleted from redis...')
-    now = datetime.datetime.now()
+    delete_keys(config, redis_conn, key_list, key_del_list)
 
     # Format the datetime as separate columns for date and time
-    date_str = now.strftime("%Y-%m-%d")
-    time_str = now.strftime("%H:%M:%S")
-    key_name = 'network_candidate_' + date_str + '_' + time_str
     agent.load_networks('network_best_candidate')
-    agent.save_networks(key_name)
+    agent.save_networks(network_name_out)
 
 
 def split_data(config, key_list, states, policy_targets, value_targets):
     train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value = \
         train_test_split(key_list, states, policy_targets, value_targets, test_size=config.validation_split)
     return train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value
+
+
+def delete_keys(config, redis_conn, key_list, key_del_list):
+    if len(key_list) > config.game_keys_limit:
+        for q, keys in enumerate(list(key_del_list)):
+            if q % 1 == 0:
+                redis_conn.delete(keys)  # disable deletion of keys
+        print(f'{len(key_del_list)} keys of {len(key_list)} keys deleted.')
+    else:
+        print(f'{len(key_list)} is below key limit of {config.game_keys_limit}.  No keys deleted.')
