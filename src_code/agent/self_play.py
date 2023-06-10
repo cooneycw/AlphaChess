@@ -2,6 +2,7 @@ import gc
 import datetime
 # from line_profiler_pycharm import profile
 from config.config import Config
+from src_code.utils.utils import tensorflow_init
 from src_code.agent.agent import AlphaZeroChess, Node
 from src_code.agent.agent import board_to_input, draw_board
 from src_code.agent.utils import get_board_piece_count, save_training_data, get_var_sizes, \
@@ -10,11 +11,13 @@ from src_code.agent.utils import get_board_piece_count, save_training_data, get_
 
 # @profile
 def play_games(pass_dict):
+    tensorflow_init()
     game_id = pass_dict['game_id']
     verbosity = pass_dict['verbosity']
     learning_rate = pass_dict['learning_rate']
     config = Config(verbosity=verbosity)
     config.update_train_rate(learning_rate)
+
 
     # Play the game
     # Initialize the agent

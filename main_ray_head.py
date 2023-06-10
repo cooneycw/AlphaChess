@@ -6,9 +6,8 @@ import copy
 import random
 import gc
 import sys
-import tensorflow as tf
-from config.config import Config, interpolate
-from src_code.utils.utils import get_non_local_ip, total_cpu_workers, total_gpu_workers
+from config.config import Config
+from src_code.utils.utils import total_cpu_workers, total_gpu_workers
 from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
 from src_code.agent.self_play import play_games
 from src_code.agent.train import train_model
@@ -24,18 +23,6 @@ from src_code.agent.utils import draw_board, get_board_piece_count, generate_gam
 # ray start --address='192.168.5.132:6379'
 
 
-tf.get_logger().setLevel('ERROR')
-physical_devices = tf.config.list_physical_devices('GPU')
-if len(tf.config.list_physical_devices('GPU')) > 0:
-    gpu_idx = 0  # Set the index of the GPU you want to use
-    # Get the GPU device
-    gpu_device = physical_devices[gpu_idx]
-    # Set the GPU memory growth
-    tf.config.experimental.set_memory_growth(gpu_device, True)
-else:
-    print('No GPUs available')
-
-
 def initialize(in_config):
     network = create_network(in_config)
     outer_agent = AlphaZeroChess(in_config, network=network)
@@ -49,7 +36,7 @@ def main_ray(in_params):
 
 def main(in_params):
     if in_params['action'] == 'play':
-        play_games()
+        play_games(in_params)
 
 
 if __name__ == '__main__':

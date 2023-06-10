@@ -1,5 +1,6 @@
 import netifaces
 import ray
+import tensorflow as tf
 
 
 def get_non_local_ip():
@@ -22,3 +23,17 @@ def total_cpu_workers():
 def total_gpu_workers():
     resources = ray.cluster_resources()
     return resources['GPU']
+
+
+def tensorflow_init():
+    tf.get_logger().setLevel('ERROR')
+    physical_devices = tf.config.list_physical_devices('GPU')
+    if len(tf.config.list_physical_devices('GPU')) > 0:
+        gpu_idx = 0  # Set the index of the GPU you want to use
+        # Get the GPU device
+        gpu_device = physical_devices[gpu_idx]
+        # Set the GPU memory growth
+        tf.config.experimental.set_memory_growth(gpu_device, True)
+    else:
+        print('No GPUs available')
+
