@@ -49,7 +49,7 @@ def main_ray(in_params):
 
 def main(in_params):
     if in_params['action'] == 'play':
-        play_game()
+        play_games()
 
 
 if __name__ == '__main__':
