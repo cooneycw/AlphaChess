@@ -146,7 +146,7 @@ if __name__ == '__main__':
         eval_params['action'] = 'evaluate'
         eval_params['verbosity'] = verbosity
         eval_params['eval_game_id'] = None
-        eval_params['random_val'] = None
+        eval_params['rand_val'] = None
         eval_params['network_current'] = 'network_current'
         eval_params['network_candidate'] = network_name_out
 
@@ -168,9 +168,9 @@ if __name__ == '__main__':
             for ind in inds:
                 eval_params['eval_game_id'] = ind
                 if ind % 2 == 0:
-                    eval_params['random_val'] = 0.25
+                    eval_params['rand_val'] = 0.25
                 else:
-                    eval_params['random_val'] = 0.75
+                    eval_params['rand_val'] = 0.75
                 eval_params_list.append(copy.deepcopy(eval_params))
 
             results = ray.get([main_ray_no_gpu.remote(eval_param) for eval_param in eval_params_list])
