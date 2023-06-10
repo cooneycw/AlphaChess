@@ -102,7 +102,7 @@ if __name__ == '__main__':
                 network_name = 'network_current'
             else:
                 network_name = 'network_current' + '_' + str(pre_eval_ind-1).zfill(5)
-            network_name_out = network_name + '_' + str(pre_eval_ind).zfill(5)
+            network_name_out = 'network_current' + '_' + str(pre_eval_ind).zfill(5)
             train_params = dict()
             train_params['action'] = 'train'
             train_params['verbosity'] = verbosity
