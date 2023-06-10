@@ -11,8 +11,10 @@ from src_code.agent.utils import scan_redis_for_training_data, load_training_dat
 def train_model(pass_dict):
     network_name = pass_dict['network_name']
     network_name_out = pass_dict['network_name_out']
+    learning_rate = pass_dict['learning_rate']
     verbosity = pass_dict['verbosity']
     config = Config(verbosity=verbosity)
+    config.update_train_rate(learning_rate)
     agent = AlphaZeroChess(config)
     redis_conn = redis.Redis(host=config.redis_host, port=config.redis_port, db=config.redis_db)
 

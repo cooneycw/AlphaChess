@@ -92,6 +92,8 @@ if __name__ == '__main__':
 
     agent_ind = 0
     while agent_ind < outer_config.eval_cycles:
+        if agent_ind % 7 == 0:
+            learning_rate = learning_rate * 0.1
         print(f'Executing train / game play iteration: {agent_ind} of {outer_config.eval_cycles}')
         pre_eval_ind = 0
         pre_eval_results = []
@@ -106,6 +108,7 @@ if __name__ == '__main__':
             train_params['verbosity'] = verbosity
             train_params['network_name'] = network_name
             train_params['network_name_out'] = network_name_out
+            train_params['learning_rate'] = learning_rate
             main(train_params)
 
             # test number of ray workers / jobs currently running
