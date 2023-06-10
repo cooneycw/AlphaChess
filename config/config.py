@@ -9,7 +9,6 @@ class Config:
         self.board_size = 8
         self.num_channels = 119
         self.all_chess_moves = create_all_moves_list()
-        self.self_play_games = 100
         self.redis_host = '192.168.5.77'
         self.redis_port = 6379
         self.redis_db = 0
@@ -21,7 +20,7 @@ class Config:
         self.temperature = 1
         self.min_temperature = 0.01
         self.temperature_threshold = 150
-        self.initial_seed_games = 50
+        self.initial_seed_games = 100
         self.game_keys_limit = 700000
         self.num_iterations = 800
         self.eval_num_iterations = 800
@@ -35,7 +34,7 @@ class Config:
         self.eps = 0.25  # Starting value for eps
         self.c_puct = 1.5
         self.eval_c_puct = 1.0
-        self.optimizer = tf.keras.optimizers.Nadam(learning_rate=0.2)  # start at 0.2
+        self.optimizer = None
         # self.optimizer = tf.keras.optimizers.Adagrad(learning_rate=0.0005)
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter

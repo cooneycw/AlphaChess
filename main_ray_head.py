@@ -8,7 +8,7 @@ import gc
 import sys
 import tensorflow as tf
 from config.config import Config, interpolate
-from src_code.utils.utils import get_non_local_ip, total_cpu_workers
+from src_code.utils.utils import get_non_local_ip, total_cpu_workers, total_gpu_workers
 from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
 from src_code.agent.self_play import play_games
 from src_code.agent.train import train_model
@@ -54,8 +54,9 @@ def main(in_params):
 
 if __name__ == '__main__':
     ray.init(logging_level=logging.INFO)
+    verbosity = False
 
-    outer_config = Config(verbosity=False)
+    outer_config = Config(verbosity=verbosity)
     initialize(outer_config)
 
     # play seed games
@@ -64,7 +65,10 @@ if __name__ == '__main__':
     outer_agent.save_networks('network_latest')
 
     start_ind = 0
+    learning_rate = 0.2
     num_workers = int(total_cpu_workers())
+    num_gpus = int(total_gpu_workers())
+    print(f'Number of workers in ray cluster: {num_workers} gpus: {num_gpus}')
     while start_ind < outer_config.initial_seed_games:
         inds = list(range(start_ind, min(start_ind + num_workers, outer_config.initial_seed_games)))
         params_list = []
@@ -72,18 +76,19 @@ if __name__ == '__main__':
         for ind in inds:
             params_item = dict()
             params_item['action'] = 'play'
-            params_item['config'] = copy.deepcopy(outer_config)
+            params_item['verbosity'] = verbosity
+            params_item['learning_rate'] = learning_rate
             params_item['game_id'] = ind
             params_list.append(params_item)
 
-            results = [main_ray.remote(params_list[j]) for j in range(len(inds))]
+        results = [main_ray.remote(params_list[j]) for j in range(len(inds))]
 
-            # Wait for all tasks to complete and get the results
-            output = ray.get(results)
+        # Wait for all tasks to complete and get the results
+        output = ray.get(results)
 
-            # Print the output of each task
-            for i, result in enumerate(output):
-                print(f'Task {i} output: {result}')
-                start_ind += 1
+        # Print the output of each task
+        for i, result in enumerate(output):
+            print(f'Task {i} output: {result}')
+            start_ind += 1
 
     ray.shutdown()

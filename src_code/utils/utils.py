@@ -17,3 +17,8 @@ def get_non_local_ip():
 def total_cpu_workers():
     resources = ray.cluster_resources()
     return resources['CPU']
+
+
+def total_gpu_workers():
+    resources = ray.cluster_resources()
+    return resources['GPU']

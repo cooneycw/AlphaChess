@@ -11,7 +11,10 @@ from src_code.agent.utils import get_board_piece_count, save_training_data, get_
 # @profile
 def play_games(pass_dict):
     game_id = pass_dict['game_id']
-    config = pass_dict['config']
+    verbosity = pass_dict['verbosity']
+    learning_rate = pass_dict['learning_rate']
+    config = Config(verbosity=verbosity)
+    config.update_train_rate(learning_rate)
 
     # Play the game
     # Initialize the agent
