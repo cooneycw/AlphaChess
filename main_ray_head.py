@@ -138,6 +138,7 @@ if __name__ == '__main__':
 
             pre_eval_ind += 1
 
+        print(f'Training cycle completed.  Awaiting self-play.  Network evaluation follows.')
         results = [ray.get(result) for result in pre_eval_results]
         print(f'Self play completed.  Initiating evaluation process using {outer_config.num_evaluation_games} games.')
 
