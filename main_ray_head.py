@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
     agent_ind = 0
     while agent_ind < outer_config.eval_cycles:
-        if agent_ind % 7 == 0 and agent_ind != 0:
+        if agent_ind % 42 == 0 and agent_ind != 0:
             learning_rate = learning_rate * 0.1
         print(f'Executing train / game play iteration: {agent_ind} of {outer_config.eval_cycles}')
         pre_eval_ind = 0
