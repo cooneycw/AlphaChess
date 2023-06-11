@@ -68,3 +68,7 @@ def play_game():
     agent.tree = None
     agent = None
     gc.collect()
+
+
+if __name__ == '__main__':
+    play_game()

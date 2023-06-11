@@ -68,28 +68,40 @@ if __name__ == '__main__':
     num_workers = int(total_cpu_workers())
     num_gpus = int(total_gpu_workers())
     print(f'Number of workers in ray cluster: {num_workers} gpus: {num_gpus}')
+    running_tasks = []
+    seed_results = []
     while start_ind < outer_config.initial_seed_games:
-        inds = list(range(start_ind, min(start_ind + num_workers, outer_config.initial_seed_games)))
-        params_list = []
+        while True:
+            # test number of ray workers / jobs currently running
+            num_workers = int(total_cpu_workers())
 
-        for ind in inds:
-            params_item = dict()
-            params_item['action'] = 'play'
-            params_item['verbosity'] = verbosity
-            params_item['learning_rate'] = learning_rate
-            params_item['network_name'] = 'network_current'
-            params_item['game_id'] = ind
-            params_list.append(params_item)
+            # Check status of running tasks
+            for task_info in running_tasks:
+                task_id = task_info
+                completed_tasks, _ = ray.wait([task_id], timeout=0)  # Check if task has finished
+                if len(completed_tasks) > 0:  # If list of completed tasks is non-empty
+                    running_tasks.remove(task_info)  # Remove it from the list of running tasks
 
-        results = [main_ray_no_gpu.remote(params_list[j]) for j in range(len(inds))]
+            if num_workers > len(running_tasks):
+                params_item = dict()
+                params_item['action'] = 'play'
+                params_item['verbosity'] = verbosity
+                params_item['learning_rate'] = learning_rate
+                params_item['network_name'] = 'network_current'
+                params_item['game_id'] = start_ind
 
-        # Wait for all tasks to complete and get the results
-        output = ray.get(results)
+                print(f'Starting game {start_ind} of {outer_config.initial_seed_games}')
+                result_id = main_ray_no_gpu.remote(params_item)
+                running_tasks.append(result_id)
+                seed_results.append(result_id)
+                break
+            else:
+                print(f'{len(running_tasks)} of {num_workers} workers busy...waiting to start job')
+                time.sleep(5)  # Note: it should be time.sleep(5) not time.time.sleep(5)
 
-        # Print the output of each task
-        for i, result in enumerate(output):
-            print(f'Task {i} output: {result}')
-            start_ind += 1
+        print(f'Seed cycle completed.  Awaiting seed self-play completion.  Regular training follows.')
+        results = [ray.get(result) for result in seed_results]
+        start_ind += 1
 
     agent_ind = 0
     while agent_ind < outer_config.eval_cycles:
@@ -142,8 +154,8 @@ if __name__ == '__main__':
 
                     print(f'Starting game {pre_eval_ind} of {outer_config.train_play_games}')
                     result_id = main_ray_no_gpu.remote(params_item)
-                    running_tasks.append((result_id,
-                                          network_name_out))  # Add this task and its network_name_out to the list of running tasks
+                    pre_eval_results.append(result_id)
+                    running_tasks.append((result_id, network_name_out))
                     break
                 else:
                     print(f'{len(running_tasks)} of {num_workers} workers busy...waiting to start job')
@@ -151,7 +163,7 @@ if __name__ == '__main__':
 
             pre_eval_ind += 1
 
-        print(f'Training cycle completed.  Awaiting self-play.  Network evaluation follows.')
+        print(f'Training cycle completed.  Awaiting self-play completion.  Network evaluation follows.')
         results = [ray.get(result) for result in pre_eval_results]
         print(f'Self play completed.  Initiating evaluation process using {outer_config.num_evaluation_games} games.')
 
