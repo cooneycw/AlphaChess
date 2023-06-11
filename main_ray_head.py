@@ -113,16 +113,22 @@ if __name__ == '__main__':
             train_params['learning_rate'] = learning_rate
             main(train_params)
 
-            running_tasks = []  # to store running tasks
+            running_tasks = []  # to store running tasks and their corresponding network_name_out values
 
             while True:
                 # test number of ray workers / jobs currently running
                 num_workers = int(total_cpu_workers())
 
                 # Check status of running tasks
-                for task_id in running_tasks:
-                    if ray.wait([task_id], timeout=0)[0]:  # If task has finished
-                        running_tasks.remove(task_id)  # Remove it from the list of running tasks
+                for task_info in running_tasks:
+                    task_id, network_key_delete = task_info
+                    completed_tasks, _ = ray.wait([task_id], timeout=0)  # Check if task has finished
+                    if len(completed_tasks) > 0:  # If list of completed tasks is non-empty
+                        running_tasks.remove(task_info)  # Remove it from the list of running tasks
+
+                        if len(running_tasks) > 0:  # If there are still running tasks
+                            # Delete the key from redis except for the very last job
+                            delete_redis_key(outer_agent, network_key_delete)
 
                 if num_workers > len(running_tasks):
                     params_item = dict()
@@ -134,7 +140,8 @@ if __name__ == '__main__':
 
                     print(f'Starting game {pre_eval_ind} of {outer_config.train_play_games}')
                     result_id = main_ray_no_gpu.remote(params_item)
-                    running_tasks.append(result_id)  # Add this task to the list of running tasks
+                    running_tasks.append((result_id,
+                                          network_name_out))  # Add this task and its network_name_out to the list of running tasks
                     break
                 else:
                     print(f'{len(running_tasks)} of {num_workers} workers busy...waiting to start job')
