@@ -113,15 +113,18 @@ if __name__ == '__main__':
             train_params['learning_rate'] = learning_rate
             main(train_params)
 
+            running_tasks = []  # to store running tasks
+
             while True:
                 # test number of ray workers / jobs currently running
                 num_workers = int(total_cpu_workers())
 
-                nodes = ray.nodes()
-                # Calculate the total number of currently running worker jobs across all nodes.
-                total_jobs = sum(len(node['Workers']) for node in nodes if 'Workers' in node)
+                # Check status of running tasks
+                for task_id in running_tasks:
+                    if ray.wait([task_id], timeout=0)[0]:  # If task has finished
+                        running_tasks.remove(task_id)  # Remove it from the list of running tasks
 
-                if num_workers > total_jobs:
+                if num_workers > len(running_tasks):
                     params_item = dict()
                     params_item['action'] = 'play'
                     params_item['verbosity'] = verbosity
@@ -131,11 +134,11 @@ if __name__ == '__main__':
 
                     print(f'Starting game {pre_eval_ind} of {outer_config.train_play_games}')
                     result_id = main_ray_no_gpu.remote(params_item)
-                    pre_eval_results.append(result_id)
+                    running_tasks.append(result_id)  # Add this task to the list of running tasks
                     break
                 else:
-                    print(f'{total_jobs} of {num_workers} workers busy...waiting to start job')
-                    time.time.sleep(5)
+                    print(f'{len(running_tasks)} of {num_workers} workers busy...waiting to start job')
+                    time.sleep(5)  # Note: it should be time.sleep(5) not time.time.sleep(5)
 
             pre_eval_ind += 1
 
