@@ -98,6 +98,7 @@ if __name__ == '__main__':
         print(f'Executing train / game play iteration: {agent_ind} of {outer_config.eval_cycles}')
         pre_eval_ind = 0
         pre_eval_results = []
+        running_tasks = []  # to store running tasks and their corresponding network_name_out values
         while pre_eval_ind < outer_config.train_play_games:
             print(f'Executing post-train self play iteration: {pre_eval_ind} of {outer_config.train_play_games}')
             if pre_eval_ind == 0:
@@ -112,8 +113,6 @@ if __name__ == '__main__':
             train_params['network_name_out'] = network_name_out
             train_params['learning_rate'] = learning_rate
             main(train_params)
-
-            running_tasks = []  # to store running tasks and their corresponding network_name_out values
 
             while True:
                 # test number of ray workers / jobs currently running
