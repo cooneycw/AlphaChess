@@ -92,10 +92,11 @@ if __name__ == '__main__':
             else:
                 print(f'{len(running_tasks)} of {num_workers} workers busy...waiting to start job')
                 time.sleep(5)  # Note: it should be time.sleep(5) not time.time.sleep(5)
+            start_ind += 1
 
         print(f'Seed cycle completed.  Awaiting seed self-play completion.  Regular training follows.')
         results = [ray.get(result) for result in seed_results]
-        start_ind += 1
+
 
     agent_ind = 0
     while agent_ind < outer_config.eval_cycles:
