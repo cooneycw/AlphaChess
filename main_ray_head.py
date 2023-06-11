@@ -57,7 +57,8 @@ if __name__ == '__main__':
 
     # play seed games
     outer_agent = AlphaZeroChess(outer_config, network=None)
-    outer_agent.redis.flushdb()
+    if outer_config.reset_redis is True:
+        outer_agent.redis.flushdb()
     initialize(outer_config)
     outer_agent.load_networks('network_current')
 
