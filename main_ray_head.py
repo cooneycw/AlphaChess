@@ -48,66 +48,67 @@ if __name__ == '__main__':
     verbosity = False
 
     outer_config = Config(verbosity=verbosity)
-
+    learning_rate = 0.2
     # play seed games
     outer_agent = AlphaZeroChess(outer_config, network=None)
     if outer_config.reset_redis is True:
         outer_agent.redis.flushdb()
-    initialize(outer_config)
+        initialize(outer_config)
     outer_agent.load_networks('network_current')
 
-    print(f'Creating initial seed game data for training base.')
-    start_ind = 0
-    learning_rate = 0.2
-    num_workers = int(total_cpu_workers())
-    num_gpus = int(total_gpu_workers())
-    print(f'Number of workers in ray cluster: {num_workers} gpus: {num_gpus}')
-    running_tasks = []
-    seed_results = []
-    while start_ind < outer_config.initial_seed_games:
-        while True:
-            # test number of ray workers / jobs currently running
-            num_workers = int(total_cpu_workers())
+    if outer_config.reset_redis is True:
+        print(f'Creating initial seed game data for training base.')
+        start_ind = 0
 
-            # Check status of running tasks
-            for task_info in running_tasks:
-                task_id = task_info
-                completed_tasks, _ = ray.wait([task_id], timeout=0)  # Check if task has finished
-                if len(completed_tasks) > 0:  # If list of completed tasks is non-empty
-                    running_tasks.remove(task_info)  # Remove it from the list of running tasks
+        num_workers = int(total_cpu_workers())
+        num_gpus = int(total_gpu_workers())
+        print(f'Number of workers in ray cluster: {num_workers} gpus: {num_gpus}')
+        running_tasks = []
+        seed_results = []
+        while start_ind < outer_config.initial_seed_games:
+            while True:
+                # test number of ray workers / jobs currently running
+                num_workers = int(total_cpu_workers())
 
-            if num_workers > len(running_tasks):
-                params_item = dict()
-                params_item['action'] = 'play'
-                params_item['verbosity'] = verbosity
-                params_item['learning_rate'] = learning_rate
-                params_item['network_name'] = 'network_current'
-                params_item['game_id'] = start_ind
+                # Check status of running tasks
+                for task_info in running_tasks:
+                    task_id = task_info
+                    completed_tasks, _ = ray.wait([task_id], timeout=0)  # Check if task has finished
+                    if len(completed_tasks) > 0:  # If list of completed tasks is non-empty
+                        running_tasks.remove(task_info)  # Remove it from the list of running tasks
 
-                print(f'Starting game {start_ind} of {outer_config.initial_seed_games}')
-                result_id = main_ray_no_gpu.remote(params_item)
-                running_tasks.append(result_id)
-                seed_results.append(result_id)
-                break
-            else:
-                print(f'{len(running_tasks)} of {num_workers} workers busy...waiting to start job')
-                time.sleep(5)  # Note: it should be time.sleep(5) not time.time.sleep(5)
+                if num_workers > len(running_tasks):
+                    params_item = dict()
+                    params_item['action'] = 'play'
+                    params_item['verbosity'] = verbosity
+                    params_item['learning_rate'] = learning_rate
+                    params_item['network_name'] = 'network_current'
+                    params_item['game_id'] = start_ind
 
-        start_ind += 1
+                    print(f'Starting game {start_ind} of {outer_config.initial_seed_games - 1}')
+                    result_id = main_ray_no_gpu.remote(params_item)
+                    running_tasks.append(result_id)
+                    seed_results.append(result_id)
+                    break
+                else:
+                    print(f'{len(running_tasks)} of {num_workers} workers busy...waiting to start job')
+                    time.sleep(5)  # Note: it should be time.sleep(5) not time.time.sleep(5)
 
-    print(f'Seed cycle completed.  Awaiting seed self-play completion.  Regular training follows.')
-    results = [ray.get(result) for result in seed_results]
+            start_ind += 1
+
+        print(f'Seed cycle completed.  Awaiting seed self-play completion.  Regular training follows.')
+        results = [ray.get(result) for result in seed_results]
 
     agent_ind = 0
     while agent_ind < outer_config.eval_cycles:
         if agent_ind % 42 == 0 and agent_ind != 0:
             learning_rate = learning_rate * 0.1
-        print(f'Executing train / game play iteration: {agent_ind} of {outer_config.eval_cycles}')
+        print(f'Executing train / game play iteration: {agent_ind} of {outer_config.eval_cycles - 1}')
         pre_eval_ind = 0
         pre_eval_results = []
         running_tasks = []  # to store running tasks and their corresponding network_name_out values
         while pre_eval_ind < outer_config.train_play_games:
-            print(f'Executing post-train self play iteration: {pre_eval_ind} of {outer_config.train_play_games}')
+            print(f'Executing post-train self play iteration: {pre_eval_ind} of {outer_config.train_play_games - 1}')
             if pre_eval_ind == 0:
                 network_name = 'network_current'
             else:
@@ -147,7 +148,7 @@ if __name__ == '__main__':
                     params_item['network_name'] = network_name_out
                     params_item['game_id'] = pre_eval_ind
 
-                    print(f'Starting game {pre_eval_ind} of {outer_config.train_play_games}')
+                    print(f'Starting game {pre_eval_ind} of {outer_config.train_play_games - 1}')
                     result_id = main_ray_no_gpu.remote(params_item)
                     pre_eval_results.append(result_id)
                     running_tasks.append((result_id, network_name_out))
@@ -227,9 +228,7 @@ if __name__ == '__main__':
             outer_agent.save_networks('network_backup')
         else:
             print(f'Network: {network_name_out} was not adequate.  Deleting keys..')
-            for k in range(0, outer_config.train_play_games):
-                key = network_name + '_' + str(k).zfill(5)
-                delete_redis_key(outer_agent, key)
+            delete_redis_key(outer_agent, network_name_out)
 
         agent_ind += 1
 

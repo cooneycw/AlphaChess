@@ -26,6 +26,7 @@ class Config:
         self.game_keys_limit = 250000
         self.num_iterations = 800
         self.eval_num_iterations = 800
+        self.play_iterations = 40
         self.num_evaluation_games = 400
         self.reset_redis = True
         self.training_sample = 4600

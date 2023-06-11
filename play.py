@@ -9,11 +9,12 @@ from src_code.in_out.windows import get_input, print_output
 
 def play_game():
     # Initialize the config and agent
-    config = Config(num_iterations=20, verbosity=True)
+    network_name = input('which network:')
+    config = Config(verbosity=True)
     # Play the game
     agent = AlphaZeroChess(config)
-    agent.load_networks('network_current')
-    iters = None
+    agent.load_networks(network_name)
+    iters = config.play_iterations
     iters_choices = [None, 40, 60, 100, 200, 400, 800, 1200]
     while not agent.game_over():
         # Get the current state of the board
