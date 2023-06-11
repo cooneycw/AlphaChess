@@ -127,7 +127,10 @@ if __name__ == '__main__':
 
                         if len(running_tasks) > 0:  # If there are still running tasks
                             # Delete the key from redis except for the very last job
-                            delete_redis_key(outer_agent, network_key_delete)
+                            if network_key_delete == 'network_current' + '_' + str(outer_config.train_play_games - 1).zfill(5):
+                                pass
+                            else:
+                                delete_redis_key(outer_agent, network_key_delete)
 
                 if num_workers > len(running_tasks):
                     params_item = dict()
