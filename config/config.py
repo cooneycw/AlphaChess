@@ -16,11 +16,11 @@ class Config:
         self.num_epochs = 1
         self.validation_split = 0.1
         self.batch_size = 32
-        self.maximum_moves = 1
+        self.maximum_moves = 150
         self.temperature = 1
         self.min_temperature = 0.01
         self.temperature_threshold = 150
-        self.initial_seed_games = 600
+        self.initial_seed_games = 20
         self.train_play_games = 1000
         self.eval_cycles = 150
         self.game_keys_limit = 700000
@@ -28,7 +28,7 @@ class Config:
         self.eval_num_iterations = 800
         self.num_evaluation_games = 400
         self.reset_redis = True
-        self.training_sample = 4600
+        self.training_sample = 50
         self.training_samples = 1
         self.early_stopping_epochs = 1
         self.reward_discount = 1.00
