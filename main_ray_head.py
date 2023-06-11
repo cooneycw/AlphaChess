@@ -1,22 +1,16 @@
-import os
 import logging
 import ray
-import socket
 import copy
-import random
 import gc
-import sys
 import time
 from config.config import Config
 from src_code.utils.utils import total_cpu_workers, total_gpu_workers
-from src_code.agent.agent import AlphaZeroChess, board_to_input, create_network
+from src_code.agent.agent import AlphaZeroChess, create_network
 from src_code.agent.self_play import play_games
 from src_code.agent.train import train_model
-from src_code.play.play import play_game
 from src_code.evaluate.evaluate import run_evaluation
-from src_code.evaluate.utils import scan_redis_for_networks, delete_redis_key
-from src_code.agent.utils import draw_board, get_board_piece_count, generate_game_id, \
-    save_training_data, load_training_data, scan_redis_for_training_data
+from src_code.evaluate.utils import delete_redis_key
+
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 # conda activate alphatf
