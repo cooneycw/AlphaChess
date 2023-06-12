@@ -108,7 +108,7 @@ if __name__ == '__main__':
         pre_eval_results = []
         running_tasks = []  # to store running tasks and their corresponding network_name_out values
         while pre_eval_ind < outer_config.train_play_games:
-            print(f'Executing post-train self play iteration: {pre_eval_ind} of {outer_config.train_play_games - 1}')
+            print(f'Executing training step: {pre_eval_ind} of {outer_config.train_play_games - 1}')
             if pre_eval_ind == 0:
                 network_name = 'network_current'
             else:
@@ -120,7 +120,9 @@ if __name__ == '__main__':
             train_params['network_name'] = network_name
             train_params['network_name_out'] = network_name_out
             train_params['learning_rate'] = learning_rate
-            main(train_params)
+            train_id = main_ray_no_gpu.remote(train_params)
+
+            result = ray.get(train_id)
 
             while True:
                 # test number of ray workers / jobs currently running
@@ -216,8 +218,6 @@ if __name__ == '__main__':
                 print(f'Challenger white wins: {challenger_white_wins} of {challenger_white_games}')
                 print(f'Challenger black wins: {challenger_black_wins} of {challenger_black_games}')
                 print(f'Games: {game_cnt} Win/lose ratio: {0.1 * (int(0.5 + 1000 * challenger_wins / (game_cnt - challenger_draws)))}% ')
-
-            gc_list = gc.get_objects()
 
         if (challenger_wins / (game_cnt - challenger_draws)) >= 0.55:
             print(f'Challenger won {0.1 * (int(0.5 + 1000 * challenger_wins / game_cnt))}% of the games')
