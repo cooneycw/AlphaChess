@@ -13,7 +13,7 @@ def play_game():
     config = Config(verbosity=True)
     # Play the game
     agent = AlphaZeroChess(config)
-    agent.load_networks(network_name)
+    agent.load_networks('network_current_' + str(network_name).zfill(5))
     iters = config.play_iterations
     iters_choices = [None, 40, 60, 100, 200, 400, 800, 1200]
     while not agent.game_over():
@@ -21,6 +21,7 @@ def play_game():
         print(f'player to move: {agent.tree.root.player_to_move}')
         uci_move, policy, policy_target = agent.get_action(iters=iters)
         legal_moves = [str(x) for x in agent.board.legal_moves]
+        legal_moves.sort()
 
         print(f'_____ Statistics _________')
         agent.tree.width()

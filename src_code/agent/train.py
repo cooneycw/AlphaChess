@@ -2,6 +2,7 @@ import random
 import redis
 import numpy as np
 import datetime
+import gc
 from sklearn.model_selection import train_test_split
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess
@@ -61,6 +62,7 @@ def train_model(pass_dict):
                                                                         [val_policy[j] for j in random_val_inds],
                                                                         [val_value[j] for j in random_val_inds])
 
+        gc.collect()
         last_n_val_losses.append(validation_loss_tot/validation_loss_cnt)
 
         if len(last_n_val_losses) > config.early_stopping_epochs:
@@ -82,12 +84,14 @@ def train_model(pass_dict):
                                                                           in last_n_val_losses[:-1]):
             print(f"Early stopping triggered at training episode {j}")
             break
+        gc.collect()
 
     delete_keys(config, redis_conn, key_list, key_del_list)
 
     # Format the datetime as separate columns for date and time
     agent.load_networks('network_best_candidate')
     agent.save_networks(network_name_out)
+    gc.collect()
 
 
 def split_data(config, key_list, states, policy_targets, value_targets):

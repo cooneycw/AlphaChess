@@ -767,16 +767,27 @@ class Node:
         most_visited_nodes = sorted(cls.all_nodes, key=lambda node: node.Nvisit, reverse=True)[:5]
         least_visited_nodes = sorted(cls.all_nodes, key=lambda node: node.Nvisit)[:5]
 
+        highest_prior_value_nodes = sorted(cls.all_nodes, key=lambda node: node.prior_value, reverse=True)[:5]
+        lowest_prior_value_nodes = sorted(cls.all_nodes, key=lambda node: node.prior_value)[:5]
+
         highest_qreward_nodes = sorted(cls.all_nodes, key=lambda node: node.Qreward, reverse=True)[:5]
         lowest_qreward_nodes = sorted(cls.all_nodes, key=lambda node: node.Qreward)[:5]
 
-        print("\nMost Valuable Nodes:")
-        for node, ucb1_value in most_valuable_nodes:
-            print(f"Node: {node.path_from_root()}, UCB1 Value: {ucb1_value:.3f}")
+        print("\nHighest Prior Value Nodes:")
+        for node in highest_prior_value_nodes:
+            print(f"Node: {node.path_from_root()}, Prior Value: {node.prior_value:.3f}")
 
-        print("\nLeast Valuable Nodes:")
-        for node, ucb1_value in least_valuable_nodes:
-            print(f"Node: {node.path_from_root()}, UCB1 Value: {ucb1_value:.3f}")
+        print("\nLowest Prior Value Nodes:")
+        for node in lowest_prior_value_nodes:
+            print(f"Node: {node.path_from_root()}, Prior Value: {node.prior_value:.3f}")
+
+        # print("\nMost Valuable Nodes:")
+        # for node, ucb1_value in most_valuable_nodes:
+        #     print(f"Node: {node.path_from_root()}, UCB1 Value: {ucb1_value:.3f}")
+        #
+        # print("\nLeast Valuable Nodes:")
+        # for node, ucb1_value in least_valuable_nodes:
+        #     print(f"Node: {node.path_from_root()}, UCB1 Value: {ucb1_value:.3f}")
 
         print(f"\nNumber of Game Over Nodes: {len(game_over_nodes)}")
 
