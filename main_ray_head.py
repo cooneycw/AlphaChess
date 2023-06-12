@@ -120,7 +120,7 @@ if __name__ == '__main__':
             train_params['network_name'] = network_name
             train_params['network_name_out'] = network_name_out
             train_params['learning_rate'] = learning_rate
-            train_id = main_ray_no_gpu.remote(train_params)
+            train_id = main_ray_gpu.remote(train_params)
 
             result = ray.get(train_id)
 
