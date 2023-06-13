@@ -14,7 +14,7 @@ from src_code.agent.utils import generate_game_id
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-USE_RAY = True
+USE_RAY = False
 NUM_WORKERS = 10
 NUM_GPUS = 0
 
@@ -52,8 +52,11 @@ def main(in_params):
         print(f'game_id:{game_id} spawned.')
         pass_dict = dict()
         pass_dict['game_id'] = game_id
+        pass_dict['verbosity'] = False
+        pass_dict['learning_rate'] = 0.2
         pass_dict['key_prefix'] = key_prefix
         pass_dict['num_iterations'] = num_iterations
+        pass_dict['network_name'] = 'network_current'
         pass_dict['self_play_games'] = num_evals
         play_games(pass_dict)
 
@@ -79,7 +82,7 @@ if __name__ == '__main__':
     type_id = 1
 
     min_iterations = 800
-    outer_config = Config(num_iterations=min_iterations, verbosity=False)
+    outer_config = Config(verbosity=False)
 
     if type_list[type_id] == 'initialize':
         initialize(outer_config)
@@ -89,7 +92,7 @@ if __name__ == '__main__':
         params['type'] = type_list[type_id]
         params['num_iterations'] = min_iterations
         params['num_evals'] = outer_config.num_evaluation_games
-        params['self_play_games'] = outer_config.self_play_games
+        params['self_play_games'] = outer_config.train_play_games
         outcome = main(params)
         print(f'Outcome: {outcome}')
 

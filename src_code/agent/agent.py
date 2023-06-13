@@ -419,9 +419,10 @@ class MCTSTree:
         if node_visits == 0:
             best_node = random.choice(node.children)
         else:
-            randomized_child_list = copy.deepcopy(node.children)
-            random.shuffle(randomized_child_list)
-            for child in randomized_child_list:
+            indices = list(range(len(node.children)))
+            random.shuffle(indices)
+            for index in indices:
+                child = node.children[index]
                 # adj only applied to Qreward (not probabilities)
                 uct = (child.Qreward * adj) + c_puct * child.prior_prob * math.sqrt(
                     node_visits + epsilon) / (1 + child.Nvisit)
