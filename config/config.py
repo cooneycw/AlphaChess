@@ -24,8 +24,8 @@ class Config:
         self.train_play_games = 250
         self.eval_cycles = 600
         self.game_keys_limit = 250000
-        self.num_iterations = 60
-        self.eval_num_iterations = 60
+        self.num_iterations = 800
+        self.eval_num_iterations = 800
         self.play_iterations = 40
         self.num_evaluation_games = 100
         self.reset_redis = True
