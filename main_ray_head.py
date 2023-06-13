@@ -105,7 +105,7 @@ if __name__ == '__main__':
             learning_rate = learning_rate * 0.1
         print(f'Executing train / game play iteration: {agent_ind} of {outer_config.eval_cycles - 1}')
         pre_eval_ind = 0
-        pre_eval_results = []
+        pre_eval_result_ids = []
         running_tasks = []  # to store running tasks and their corresponding network_name_out values
         while pre_eval_ind < outer_config.train_play_games:
             print(f'Executing training step: {pre_eval_ind} of {outer_config.train_play_games - 1}')
@@ -152,7 +152,7 @@ if __name__ == '__main__':
 
                     print(f'Starting game {pre_eval_ind} of {outer_config.train_play_games - 1}')
                     result_id = main_ray_no_gpu.remote(params_item)
-                    pre_eval_results.append(result_id)
+                    pre_eval_result_ids.append(result_id)
                     running_tasks.append((result_id, network_name_out))
                     break
                 else:
@@ -162,7 +162,7 @@ if __name__ == '__main__':
             pre_eval_ind += 1
 
         print(f'Training cycle completed.  Awaiting self-play completion.  Network evaluation follows.')
-        results = [ray.get(result) for result in pre_eval_results]
+        # no need to wait for the training to complete if the final network model is ready for testing
         print(f'Self play completed.  Initiating evaluation process using {outer_config.num_evaluation_games} games.')
 
         eval_params = dict()
@@ -173,6 +173,41 @@ if __name__ == '__main__':
         eval_params['network_current'] = 'network_current'
         eval_params['network_candidate'] = network_name_out
 
+        ind = 0
+        eval_result_ids = []
+        while ind < outer_config.num_evaluation_games:
+            eval_params['eval_game_id'] = ind
+            if ind % 2 == 0:
+                eval_params['rand_val'] = 0.25
+            else:
+                eval_params['rand_val'] = 0.75
+
+            while True:
+                # test number of ray workers / jobs currently running
+                num_workers = int(total_cpu_workers())
+
+                # Check status of running tasks (should include pre-existing games since we did not await completion)
+                for task_info in running_tasks:
+                    task_id = task_info
+                    completed_tasks, _ = ray.wait([task_id], timeout=0)  # Check if task has finished
+                    if len(completed_tasks) > 0:  # If list of completed tasks is non-empty
+                        running_tasks.remove(task_info)  # Remove it from the list of running tasks
+
+                if num_workers > len(running_tasks):
+                    print(f'Starting evaluation game {ind} of {outer_config.num_evaluation_games - 1}')
+                    result_id = main_ray_no_gpu.remote(eval_params)
+                    running_tasks.append(result_id)
+                    eval_result_ids.append(result_id)
+                    break
+                else:
+                    print(f'{len(running_tasks)} of {num_workers} workers busy...waiting to start job')
+                    time.sleep(5)  # Note: it should be time.sleep(5) not time.time.sleep(5)
+
+            ind += 1
+
+        eval_results = [ray.get(eval_result_id) for eval_result_id in eval_result_ids]
+        pre_eval_results = [ray.get(pre_eval_id) for pre_eval_id in pre_eval_result_ids]
+
         challenger_wins = 0
         challenger_white_wins = 0
         challenger_black_wins = 0
@@ -182,34 +217,19 @@ if __name__ == '__main__':
         challenger_black_games = 0
 
         game_cnt = 0
-        max_evals = outer_config.num_evaluation_games
-        i = 0
-        num_workers = int(total_cpu_workers())
-        while i < max_evals:
-            inds = [x for x in range(i, min(i + num_workers, max_evals))]
-            eval_params_list = []
-            for ind in inds:
-                eval_params['eval_game_id'] = ind
-                if ind % 2 == 0:
-                    eval_params['rand_val'] = 0.25
-                else:
-                    eval_params['rand_val'] = 0.75
-                eval_params_list.append(copy.deepcopy(eval_params))
 
-            results = ray.get([main_ray_no_gpu.remote(eval_param) for eval_param in eval_params_list])
+        for result in eval_results:
+            game_cnt += 1
 
-            for result in results:
-                game_cnt += 1
-                i += 1
-                if result['player_to_go'] == 'candidate':
-                    challenger_white_games += 1
-                    challenger_white_wins += result['challenger_wins']
-                else:
-                    challenger_black_games += 1
-                    challenger_black_wins += result['challenger_wins']
-                challenger_wins += result['challenger_wins']
-                challenger_losses += result['challenger_losses']
-                challenger_draws += result['challenger_draws']
+            if result['player_to_go'] == 'candidate':
+                challenger_white_games += 1
+                challenger_white_wins += result['challenger_wins']
+            else:
+                challenger_black_games += 1
+                challenger_black_wins += result['challenger_wins']
+            challenger_wins += result['challenger_wins']
+            challenger_losses += result['challenger_losses']
+            challenger_draws += result['challenger_draws']
 
             if (game_cnt - challenger_draws) == 0:
                 print(f'Games: {game_cnt} Wins: {challenger_wins} Losses: {challenger_losses} Draws: {challenger_draws}')
