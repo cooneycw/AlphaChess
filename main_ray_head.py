@@ -188,7 +188,7 @@ if __name__ == '__main__':
 
                 # Check status of running tasks (should include pre-existing games since we did not await completion)
                 for task_info in running_tasks:
-                    task_id = task_info
+                    task_id, _ = task_info
                     completed_tasks, _ = ray.wait([task_id], timeout=0)  # Check if task has finished
                     if len(completed_tasks) > 0:  # If list of completed tasks is non-empty
                         running_tasks.remove(task_info)  # Remove it from the list of running tasks
@@ -196,7 +196,7 @@ if __name__ == '__main__':
                 if num_workers > len(running_tasks):
                     print(f'Starting evaluation game {ind} of {outer_config.num_evaluation_games - 1}')
                     result_id = main_ray_no_gpu.remote(eval_params)
-                    running_tasks.append(result_id)
+                    running_tasks.append((result_id, " "))
                     eval_result_ids.append(result_id)
                     break
                 else:
