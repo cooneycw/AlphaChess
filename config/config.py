@@ -9,7 +9,7 @@ class Config:
         self.board_size = 8
         self.num_channels = 119
         self.all_chess_moves = create_all_moves_list()
-        self.redis_host = '192.168.5.77'
+        self.redis_host = '100.125.217.116'
         self.redis_port = 6379
         self.redis_db = 0
         # Training settings

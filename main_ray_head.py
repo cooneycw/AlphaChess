@@ -15,7 +15,7 @@ from src_code.evaluate.utils import delete_redis_key
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 # conda activate alphatf
 # ray start --head --num-cpus 10 --num-gpus 1 --dashboard-host 0.0.0.0
-# ray start --address='192.168.5.132:6379'
+# ray start --address='100.112.33.128:6379'
 
 
 def initialize(in_config):
