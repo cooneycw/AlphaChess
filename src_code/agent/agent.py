@@ -182,6 +182,7 @@ class AlphaZeroChess:
                         layer_name[0:14] == 'policy_flatten' or
                         layer_name[0:10] == 'activation' or
                         layer_name[0:4] == 'relu' or
+                        layer_name[0:7] == 'dropout' or
                         layer_name[0:8] == 'res_relu'):
                     continue
                 layer_weights = weights_dict[layer_name]

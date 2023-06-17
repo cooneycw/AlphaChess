@@ -13,7 +13,7 @@ from src_code.evaluate.utils import scan_redis_for_networks, delete_redis_key
 from src_code.agent.utils import generate_game_id
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-
+tf.get_logger().setLevel('ERROR')
 USE_RAY = False
 NUM_WORKERS = 10
 NUM_GPUS = 0
@@ -56,7 +56,7 @@ def main(in_params):
         pass_dict['learning_rate'] = 0.2
         pass_dict['key_prefix'] = key_prefix
         pass_dict['num_iterations'] = num_iterations
-        pass_dict['network_name'] = 'network_current'
+        pass_dict['network_name'] = 'network_current_00249'
         pass_dict['self_play_games'] = num_evals
         play_games(pass_dict)
 
