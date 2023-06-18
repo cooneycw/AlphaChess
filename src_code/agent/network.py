@@ -27,7 +27,7 @@ def residual_block(x, filters, block_idx, l1=0.00001, l2=0.000001, dropout_rate=
 #     return y
 #
 
-def create_network(config, l1=0.0001, l2=0.00001, dropout_rate=0.5):
+def create_network(config, l1=0.00001, l2=0.000001, dropout_rate=0.5):
     # Input layer
     inputs = Input(shape=(config.board_size, config.board_size, config.num_channels), name='input')
 
