@@ -44,7 +44,13 @@ def main(in_params):
 
 
 if __name__ == '__main__':
-    ray.init(logging_level=logging.INFO)
+    env_vars = {
+        'CUDNN_PATH': '/home/cooneycw/miniconda3/envs/alphatf/lib/python3.11/site-packages/nvidia/cudnn',
+        'LD_LIBRARY_PATH': '/home/cooneycw/miniconda3/envs/alphatf/lib/:/home/cooneycw/miniconda3/envs/alphatf/lib/python3.11/site-packages/nvidia/cudnn/lib',
+        'XLA_FLAGS': '--xla_gpu_cuda_data_dir=/home/cooneycw/miniconda3/envs/alphatf/lib/',
+               }
+
+    ray.init(job_config=ray.job_config.JobConfig(runtime_env=env_vars), logging_level=logging.INFO)
     verbosity = False
 
     outer_config = Config(verbosity=verbosity)
