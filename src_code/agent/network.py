@@ -4,7 +4,7 @@ from keras.regularizers import l1_l2
 from keras.layers import Input, Conv2D, BatchNormalization, Activation, Add, Flatten, Dense, Dropout
 
 
-def residual_block(x, filters, block_idx, l1=0.0001, l2=0.00001, dropout_rate=0.5):
+def residual_block(x, filters, block_idx, l1=0.00001, l2=0.000001, dropout_rate=0.5):
     y = Conv2D(filters, kernel_size=3, padding='same', kernel_regularizer=l1_l2(l1=l1, l2=l2), name=f'res_conv1_block{block_idx}')(x)
     y = BatchNormalization(name=f'res_bn1_block{block_idx}')(y)
     y = Activation('relu', name=f'res_relu1_block{block_idx}')(y)
