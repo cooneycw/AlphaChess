@@ -39,7 +39,6 @@ class Config:
         self.c_puct = 1.5
         self.eval_c_puct = 1.0
         self.optimizer = None
-        # self.optimizer = tf.keras.optimizers.Adagrad(learning_rate=0.0005)
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter
@@ -47,7 +46,8 @@ class Config:
         self.ChessDataset = ChessDataset
 
     def update_train_rate(self, learning_rate):
-        self.optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
+        # self.optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
+        self.optimizer = tf.keras.optimizers.Adagrad(learning_rate=learning_rate)
 
 
 def create_all_moves_list():
