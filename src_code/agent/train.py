@@ -14,8 +14,9 @@ def train_model(pass_dict):
     network_name_out = pass_dict['network_name_out']
     learning_rate = pass_dict['learning_rate']
     verbosity = pass_dict['verbosity']
+    opt_type = pass_dict['opt_type']
     config = Config(verbosity=verbosity)
-    config.update_train_rate(learning_rate)
+    config.update_train_rate(learning_rate, opt_type)
     agent = AlphaZeroChess(config)
     redis_conn = redis.Redis(host=config.redis_host, port=config.redis_port, db=config.redis_db)
 

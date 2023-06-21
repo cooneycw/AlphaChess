@@ -49,6 +49,7 @@ if __name__ == '__main__':
 
     outer_config = Config(verbosity=verbosity)
     learning_rate = 0.2
+    opt_type = 'ada'
     # play seed games
     outer_agent = AlphaZeroChess(outer_config, network=None)
     if outer_config.reset_redis is True:
@@ -103,6 +104,7 @@ if __name__ == '__main__':
     while agent_ind < outer_config.eval_cycles:
         if agent_ind % 42 == 0 and agent_ind != 0:
             learning_rate = learning_rate * 0.1
+            opt_type = 'nadam'
         print(f'Executing train / game play iteration: {agent_ind} of {outer_config.eval_cycles - 1}')
         pre_eval_ind = 0
         pre_eval_result_ids = []
@@ -120,6 +122,7 @@ if __name__ == '__main__':
             train_params['network_name'] = network_name
             train_params['network_name_out'] = network_name_out
             train_params['learning_rate'] = learning_rate
+            train_params['opt_type'] = opt_type
             train_id = main_ray_gpu.remote(train_params)
 
             result = ray.get(train_id)

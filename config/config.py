@@ -45,9 +45,11 @@ class Config:
         self.game_counter = GameCounter()
         self.ChessDataset = ChessDataset
 
-    def update_train_rate(self, learning_rate):
-        # self.optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
-        self.optimizer = tf.keras.optimizers.Adagrad(learning_rate=learning_rate)
+    def update_train_rate(self, learning_rate, type):
+        if type == 'ada':
+            self.optimizer = tf.keras.optimizers.Adagrad(learning_rate=learning_rate)
+        elif type == 'nadam':
+            self.optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
 
 
 def create_all_moves_list():

@@ -29,7 +29,6 @@ def play_games(pass_dict):
     learning_rate = pass_dict['learning_rate']
     network_name = pass_dict['network_name']
     config = Config(verbosity=verbosity)
-    config.update_train_rate(learning_rate)
 
 
     # Play the game
