@@ -35,11 +35,11 @@ def create_network(config, l1=0.000001, l2=0.000001, dropout_rate=0.5):
     x = Conv2D(256, kernel_size=3, padding='same', name='conv1', kernel_regularizer=l1_l2(l1=l1, l2=l2))(inputs)
     x = BatchNormalization(name='bn1')(x)
     x = Activation('relu', name='relu1')(x)
-    for i in range(20):
+    for i in range(10):
         x = residual_block(x, 256, block_idx=i+1)
 
     # Value head
-    v = Conv2D(256, kernel_size=3, padding='same', name='value_conv', kernel_regularizer=l1_l2(l1=l1, l2=l2))(x)
+    v = Conv2D(64, kernel_size=1, padding='same', name='value_conv', kernel_regularizer=l1_l2(l1=l1, l2=l2))(x)
     v = BatchNormalization(name='value_bn')(v)
     v = Activation('relu', name='value_relu')(v)
     v = Flatten(name='value_flatten')(v)
@@ -47,7 +47,7 @@ def create_network(config, l1=0.000001, l2=0.000001, dropout_rate=0.5):
     v = Dense(1, activation='tanh', kernel_initializer='glorot_normal', name='value')(v)
 
     # Policy head
-    p = Conv2D(256, kernel_size=3, padding='same', name='policy_conv', kernel_regularizer=l1_l2(l1=l1, l2=l2))(x)
+    p = Conv2D(64, kernel_size=1, padding='same', name='policy_conv', kernel_regularizer=l1_l2(l1=l1, l2=l2))(x)
     p = BatchNormalization(name='policy_bn')(p)
     p = Activation('relu', name='policy_relu')(p)
     p = Flatten(name='policy_flatten')(p)
