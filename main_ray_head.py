@@ -54,6 +54,7 @@ if __name__ == '__main__':
     outer_agent = AlphaZeroChess(outer_config, network=None)
     if outer_config.reset_redis is True:
         outer_agent.redis.flushdb()
+    if outer_config.reset_network is True:
         initialize(outer_config)
     outer_agent.load_networks('network_current')
 

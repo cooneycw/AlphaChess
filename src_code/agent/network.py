@@ -39,19 +39,19 @@ def create_network(config, l1=0.000001, l2=0.000001, dropout_rate=0.5):
         x = residual_block(x, 256, block_idx=i+1)
 
     # Value head
-    v = Conv2D(1, kernel_size=1, padding='same', name='value_conv', kernel_regularizer=l1_l2(l1=l1, l2=l2))(x)
+    v = Conv2D(256, kernel_size=3, padding='same', name='value_conv', kernel_regularizer=l1_l2(l1=l1, l2=l2))(x)
     v = BatchNormalization(name='value_bn')(v)
     v = Activation('relu', name='value_relu')(v)
     v = Flatten(name='value_flatten')(v)
-    v = Dense(256, activation='relu', kernel_initializer='glorot_normal', name='value_dense1', kernel_regularizer=l1_l2(l1=l1, l2=l2))(v)
-    v = Dense(1, activation='tanh', kernel_initializer='glorot_normal', name='value', kernel_regularizer=l1_l2(l1=l1, l2=l2))(v)
+    v = Dense(256, activation='relu', kernel_initializer='glorot_normal', name='value_dense1')(v)
+    v = Dense(1, activation='tanh', kernel_initializer='glorot_normal', name='value')(v)
 
     # Policy head
-    p = Conv2D(2, kernel_size=1, padding='same', name='policy_conv', kernel_regularizer=l1_l2(l1=l1, l2=l2))(x)
+    p = Conv2D(256, kernel_size=3, padding='same', name='policy_conv', kernel_regularizer=l1_l2(l1=l1, l2=l2))(x)
     p = BatchNormalization(name='policy_bn')(p)
     p = Activation('relu', name='policy_relu')(p)
     p = Flatten(name='policy_flatten')(p)
-    p = Dense(config.action_space_size, kernel_initializer='glorot_normal', activation='softmax', name='policy', kernel_regularizer=l1_l2(l1=l1, l2=l2))(p)
+    p = Dense(config.action_space_size, kernel_initializer='glorot_normal', activation='softmax', name='policy')(p)
 
     model = tf.keras.Model(inputs=inputs, outputs=[p, v])
 

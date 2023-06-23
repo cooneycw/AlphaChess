@@ -29,6 +29,7 @@ class Config:
         self.play_iterations = 40
         self.num_evaluation_games = 200
         self.reset_redis = True
+        self.reset_network = True
         self.training_sample = 4600
         self.training_samples = 1
         self.early_stopping_epochs = 1

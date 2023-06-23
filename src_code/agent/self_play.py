@@ -4,6 +4,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 # from line_profiler_pycharm import profile
+from collections import Counter
 from config.config import Config
 from src_code.agent.agent import AlphaZeroChess, Node
 from src_code.agent.agent import board_to_input, draw_board
@@ -55,6 +56,20 @@ def play_games(pass_dict):
         # if player == 'black':
         #     uci_move = input()
         #
+
+        # Collect all prior values from nodes
+        prior_values = [node.prior_value for node in agent.tree.root.all_nodes]
+
+        # Count the occurrences of each prior value
+        prior_value_counts = Counter(prior_values)
+
+        # Get the top 10 most common values and their counts
+        top_10_values = prior_value_counts.most_common(10)
+
+        # Display the top 10 values and counts
+        for value, count in top_10_values:
+            print(f"Value: {value}, Count: {count}")
+
         agent.board.push_uci(uci_move)
 
         key_id = f'azChess_{game_id}_{agent.move_counter.count}_{datetime.datetime.now()}'
