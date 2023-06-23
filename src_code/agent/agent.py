@@ -5,6 +5,7 @@ import redis
 import math
 import copy
 import random
+import gzip
 import pickle
 import numpy as np
 import requests
@@ -146,7 +147,8 @@ class AlphaZeroChess:
 
     def load_network_weights(self, key_name):
         # Connect to Redis and retrieve the serialized weights
-        serialized_weights = self.redis.get(key_name)
+        compressed_serialized_weights = self.redis.get(key_name)
+        serialized_weights = gzip.decompress(compressed_serialized_weights)
 
         if serialized_weights is None:
             # Initialize the weights if no weights are found in Redis
@@ -222,9 +224,10 @@ class AlphaZeroChess:
 
         # Serialize the dictionary to a byte string using NumPy
         pickle_dict = pickle.dumps(weights_dict)
+        compressed_pickle_dict = gzip.compress(pickle_dict)
 
         # Connect to Redis and save the weights using the specified key name
-        self.redis.set(key_name, pickle_dict)
+        self.redis.set(key_name, compressed_pickle_dict)
 
         print(f"Network weights saved to Redis key '{key_name}'")
 
