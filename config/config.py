@@ -48,9 +48,11 @@ class Config:
 
     def update_train_rate(self, learning_rate, type):
         if type == 'ada':
-            self.optimizer = tf.keras.optimizers.Adagrad(learning_rate=learning_rate)
+            self.policy_optimizer = tf.keras.optimizers.Adagrad(learning_rate=learning_rate)
+            self.value_optimizer = tf.keras.optimizers.Adagrad(learning_rate=learning_rate)
         elif type == 'nadam':
-            self.optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
+            self.policy_optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
+            self.value_optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
 
 
 def create_all_moves_list():

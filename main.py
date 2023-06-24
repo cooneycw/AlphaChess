@@ -58,6 +58,7 @@ def main(in_params):
         pass_dict['num_iterations'] = num_iterations
         pass_dict['network_name'] = 'network_current'
         pass_dict['self_play_games'] = num_evals
+        pass_dict['run_type'] = 'not_ray'
         play_games(pass_dict)
 
         return f'Finished running the main function with type: {type} Game ID: {game_id}'
@@ -78,14 +79,15 @@ def main(in_params):
 
 
 def initialize(in_config):
-    network = create_network(in_config)
-    outer_agent = AlphaZeroChess(in_config, network=network)
+    policy_network = create_network(in_config, network_type='policy')
+    value_network = create_network(in_config, network_type='value')
+    outer_agent = AlphaZeroChess(in_config, policy_network=policy_network, value_network=value_network)
     outer_agent.save_networks('network_current')
 
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate', 'play']
-    type_id = 2
+    type_id = 1
 
     min_iterations = 800
     outer_config = Config(verbosity=False)

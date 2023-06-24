@@ -41,8 +41,10 @@ def train_model(pass_dict):
     train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value = \
         split_data(config, key_list, states, policy_targets, value_targets)
 
-    best_val = float('inf')
-    last_n_val_losses = []
+    best_policy_val = float('inf')
+    best_value_val = float('inf')
+    last_n_val_policy_losses = []
+    last_n_val_value_losses = []
     key_del_list = set()
     for j in range(config.training_samples):
         num_train_samples = min(int(0.5 + (config.training_sample * (1-config.validation_split))), len(train_value))
@@ -56,7 +58,14 @@ def train_model(pass_dict):
         print(f'Sample: {j+1} of {config.training_samples}  Sampled {len(random_train_inds)} training records and {len(random_val_inds)} validation records')
         print(f'Sum of values: {np.sum([train_value[i] for i in random_train_inds])}  Win Absolute Ratio: {int(100 * (0.005 + win_abs_ratio))}%  Win Ratio: {int(100 * (0.005 + win_ratio))}%')
 
-        validation_loss_tot, validation_loss_cnt = agent.update_network([train_states[i] for i in random_train_inds],
+        policy_validation_loss_tot, policy_validation_loss_cnt = agent.update_policy_network([train_states[i] for i in random_train_inds],
+                                                                        [train_policy[i] for i in random_train_inds],
+                                                                        [train_value[i] for i in random_train_inds],
+                                                                        [val_states[j] for j in random_val_inds],
+                                                                        [val_policy[j] for j in random_val_inds],
+                                                                        [val_value[j] for j in random_val_inds])
+
+        value_validation_loss_tot, value_validation_loss_cnt = agent.update_value_network([train_states[i] for i in random_train_inds],
                                                                         [train_policy[i] for i in random_train_inds],
                                                                         [train_value[i] for i in random_train_inds],
                                                                         [val_states[j] for j in random_val_inds],
@@ -64,15 +73,24 @@ def train_model(pass_dict):
                                                                         [val_value[j] for j in random_val_inds])
 
         gc.collect()
-        last_n_val_losses.append(validation_loss_tot/validation_loss_cnt)
+        last_n_val_policy_losses.append(policy_validation_loss_tot/policy_validation_loss_cnt)
+        last_n_val_value_losses.append(value_validation_loss_tot /value_validation_loss_cnt)
 
-        if len(last_n_val_losses) > config.early_stopping_epochs:
-            last_n_val_losses.pop(0)  # Remove the oldest validation loss
+        if len(last_n_val_policy_losses) > config.early_stopping_epochs:
+            last_n_val_policy_losses.pop(0)  # Remove the oldest validation loss
 
-        if len(last_n_val_losses) >= config.early_stopping_epochs:
-            if last_n_val_losses[-1] < best_val:
-                best_val = last_n_val_losses[-1]
-                agent.save_networks('network_best_candidate')
+        if len(last_n_val_policy_losses) >= config.early_stopping_epochs:
+            if last_n_val_policy_losses[-1] < best_policy_val:
+                best_policy_val = last_n_val_policy_losses[-1]
+                agent.save_networks('policy_network_best_candidate')
+
+        if len(last_n_val_value_losses) > config.early_stopping_epochs:
+            last_n_val_value_losses.pop(0)  # Remove the oldest validation loss
+
+        if len(last_n_val_value_losses) >= config.early_stopping_epochs:
+            if last_n_val_value_losses[-1] < best_value_val:
+                best_value_val = last_n_val_value_losses[-1]
+                agent.save_networks('value_network_best_candidate')
 
         # Remove sampled games from Redis
         for train_key in [train_key_list[i] for i in random_train_inds]:
@@ -81,8 +99,8 @@ def train_model(pass_dict):
             key_del_list.add(val_key)
 
         # Check if validation loss has not decreased for 'early_stopping_epochs' consecutive epochs
-        if len(last_n_val_losses) == config.early_stopping_epochs and all(x <= last_n_val_losses[-1] for x
-                                                                          in last_n_val_losses[:-1]):
+        if len(last_n_val_policy_losses) == config.early_stopping_epochs and all(x <= last_n_val_policy_losses[-1] for x
+                                                                          in last_n_val_policy_losses[:-1]):
             print(f"Early stopping triggered at training episode {j}")
             break
         gc.collect()
@@ -90,8 +108,12 @@ def train_model(pass_dict):
     delete_keys(config, redis_conn, key_list, key_del_list)
 
     # Format the datetime as separate columns for date and time
-    agent.load_networks('network_best_candidate')
-    agent.save_networks(network_name_out)
+    agent.load_networks('policy_network_best_candidate')
+    agent.save_networks('policy_' + network_name_out)
+
+    agent.load_networks('value_network_best_candidate')
+    agent.save_networks('value_' + network_name_out)
+
     gc.collect()
 
 

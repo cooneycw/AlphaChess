@@ -29,6 +29,7 @@ def play_games(pass_dict):
     verbosity = pass_dict['verbosity']
     learning_rate = pass_dict['learning_rate']
     network_name = pass_dict['network_name']
+    run_type = pass_dict['run_type']
     config = Config(verbosity=verbosity)
 
 
@@ -57,18 +58,19 @@ def play_games(pass_dict):
         #     uci_move = input()
         #
 
-        # Collect all prior values from nodes
-        prior_values = [node.prior_value for node in agent.tree.root.all_nodes]
+        if run_type != 'ray':
+            # Collect all prior values from nodes
+            prior_values = [node.prior_value for node in agent.tree.root.all_nodes]
 
-        # Count the occurrences of each prior value
-        prior_value_counts = Counter(prior_values)
+            # Count the occurrences of each prior value
+            prior_value_counts = Counter(prior_values)
 
-        # Get the top 10 most common values and their counts
-        top_10_values = prior_value_counts.most_common(10)
+            # Get the top 10 most common values and their counts
+            top_10_values = prior_value_counts.most_common(10)
 
-        # Display the top 10 values and counts
-        for value, count in top_10_values:
-            print(f"Value: {value}, Count: {count}")
+            # Display the top 10 values and counts
+            for value, count in top_10_values:
+                print(f"Value: {value}, Count: {count}")
 
         agent.board.push_uci(uci_move)
 

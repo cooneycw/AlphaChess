@@ -19,7 +19,7 @@ from src_code.agent.network import create_network
 
 
 class AlphaZeroChess:
-    def __init__(self, config, network=None):
+    def __init__(self, config, policy_network=None, value_network=None):
         self.config = config
         self.board = chess.Board()
         # self.board = chess.Board(None)
@@ -39,10 +39,17 @@ class AlphaZeroChess:
         self.move_counter = config.MoveCounter()
         self.redis = redis.StrictRedis(host=config.redis_host, port=config.redis_port, db=config.redis_db)
         # Create the value networks
-        if network is None:
-            self.network = create_network(config)
+        if policy_network is None:
+            network_type = 'policy'
+            self.policy_network = create_network(config, network_type)
         else:
-            self.network = network
+            self.policy_network = policy_network
+
+        if value_network is None:
+            network_type = 'value'
+            self.value_network = create_network(config, network_type)
+        else:
+            self.value_network = value_network
 
         # Assign the optimizer to self.optimizer
         self.optimizer = config.optimizer
@@ -68,7 +75,7 @@ class AlphaZeroChess:
         """Get the best action to take given the current state of the board."""
         """Uses dirichlet noise to encourage exploration in place of temperature."""
         while self.sim_counter.get_count() < iters:
-            self.tree.process_mcts(self.tree.root, self.config, self.network, eval)
+            self.tree.process_mcts(self.tree.root, self.config, self.policy_network, self.value_network, eval)
             self.sim_counter.increment()
             if self.config.verbosity is True:
                 if self.sim_counter.get_count() % 100 == 0:
@@ -93,82 +100,156 @@ class AlphaZeroChess:
     def game_over(self):
         return self.board.is_game_over(claim_draw=True)
 
-    def update_network(self, train_states, train_policy, train_value, val_states, val_policy, val_value):
+    def update_policy_network(self, train_states, train_policy, train_value, val_states, val_policy, val_value):
         """Update the neural network with the latest training data."""
         # Split the data into training and validation sets
-        train_dataset = self.config.ChessDataset(train_states, train_policy, train_value)
+        train_dataset = self.config.ChessDataset(train_states, train_policy)
         train_dataloader = tf.data.Dataset.from_generator(lambda: train_dataset,
-                                                          (tf.float64, tf.float64, tf.float64)).batch(
+                                                          (tf.float64, tf.float64)).batch(
             self.config.batch_size)
 
-        val_dataset = self.config.ChessDataset(val_states, val_policy, val_value)
+        val_dataset = self.config.ChessDataset(val_states, val_policy)
         val_dataloader = tf.data.Dataset.from_generator(lambda: val_dataset,
-                                                        (tf.float64, tf.float64, tf.float64)).batch(
+                                                        (tf.float64, tf.float64)).batch(
             self.config.batch_size)
 
         validation_loss_tot = 0
         validation_loss_cnt = 0
 
         # Define metrics
-        metrics = [keras.metrics.CategoricalAccuracy(), keras.metrics.MeanSquaredError()]
+        metrics = keras.metrics.CategoricalAccuracy()
+        # metrics = keras.metrics.MeanSquaredError()
 
         # Compile the model before training
-        self.network.compile(optimizer=self.optimizer, loss=['categorical_crossentropy', 'mean_squared_error'],
+        self.policy_network.compile(optimizer=self.policy_optimizer, loss='categorical_crossentropy',
                              metrics=metrics)
 
         for epoch in range(self.config.num_epochs):
             # Train the model using the training data
-            history = self.network.fit(train_dataloader,
+            history = self.policy_network.fit(train_dataloader,
                                        epochs=1,
                                        validation_data=val_dataloader)
 
             avg_train_loss = history.history['loss'][0]
             avg_val_policy_loss = history.history['val_loss'][0]
             avg_val_policy_accuracy = history.history['val_policy_categorical_accuracy'][0]
+
+            # Print the training and validation metrics
+            print(f'Epoch {epoch + 1}:')
+            print(f'Training - Loss: {avg_train_loss:.4f}')
+            print(f'Policy Validation - Loss: {avg_val_policy_loss:.4f}, Accuracy: {avg_val_policy_accuracy:.4f}')
+
+            validation_loss_tot += avg_val_policy_loss
+            validation_loss_cnt += 1
+
+        return validation_loss_tot, validation_loss_cnt
+
+    def update_value_network(self, train_states, train_policy, train_value, val_states, val_policy, val_value):
+        """Update the neural network with the latest training data."""
+        # Split the data into training and validation sets
+
+        train_dataset = self.config.ChessDataset(train_states, train_value)
+        train_dataloader = tf.data.Dataset.from_generator(lambda: train_dataset,
+                                                          (tf.float64, tf.float64)).batch(
+            self.config.batch_size)
+
+        val_dataset = self.config.ChessDataset(val_states, val_value)
+        val_dataloader = tf.data.Dataset.from_generator(lambda: val_dataset,
+                                                        (tf.float64, tf.float64)).batch(
+            self.config.batch_size)
+
+        validation_loss_tot = 0
+        validation_loss_cnt = 0
+
+        # Define metrics
+        metrics = keras.metrics.MeanSquaredError()
+
+        # Compile the model before training
+        self.value_network.compile(optimizer=self.value_optimizer, loss='mean_squared_error',
+                                   metrics= metrics)
+
+        for epoch in range(self.config.num_epochs):
+            # Train the model using the training data
+            history = self.value_network.fit(train_dataloader,
+                                       epochs=1,
+                                       validation_data=val_dataloader)
+
+            avg_train_loss = history.history['loss'][0]
             avg_val_value_loss = history.history['val_value_loss'][0]
             avg_val_value_mse = history.history['value_mean_squared_error'][0]
 
             # Print the training and validation metrics
             print(f'Epoch {epoch + 1}:')
             print(f'Training - Loss: {avg_train_loss:.4f}')
-            print(f'Policy Validation - Loss: {avg_val_policy_loss:.4f}, Accuracy: {avg_val_policy_accuracy:.4f}')
             print(f'Value Validation - Loss: {avg_val_value_loss:.4f}, Accuracy: {avg_val_value_mse:.4f}')
 
-            validation_loss_tot += avg_val_policy_loss + avg_val_value_loss
+            validation_loss_tot += avg_val_value_loss
             validation_loss_cnt += 1
 
         return validation_loss_tot, validation_loss_cnt
 
     def load_network_weights(self, key_name):
-        # Connect to Redis and retrieve the serialized weights
-        serialized_weights = self.redis.get(key_name)
+        for network_type in ['policy', 'value']:
+            if network_type == 'policy':
+                # Connect to Redis and retrieve the serialized weights
+                serialized_weights = self.redis.get('policy_' + key_name)
 
-        if serialized_weights is None:
-            # Initialize the weights if no weights are found in Redis
-            raise Exception(f'No weights found in Redis: {key_name}')
+                if serialized_weights is None:
+                    # Initialize the weights if no weights are found in Redis
+                    raise Exception(f'No weights found in Redis: policy_{key_name}')
 
-        else:
-            # Deserialize the weights from the byte string using NumPy
-            weights_dict = pickle.loads(serialized_weights)
+                else:
+                    # Deserialize the weights from the byte string using NumPy
+                    weights_dict = pickle.loads(serialized_weights)
 
-            # Set the weights for each layer of the network
-            for layer in self.network.layers:
-                layer_name = layer.name
-                if (layer_name[0:5] == 'input' or
-                        layer_name[0:7] == 'res_add' or
-                        layer_name[0:10] == 'value_relu' or
-                        layer_name[0:11] == 'policy_relu' or
-                        layer_name[0:13] == 'value_flatten' or
-                        layer_name[0:14] == 'policy_flatten' or
-                        layer_name[0:10] == 'activation' or
-                        layer_name[0:4] == 'relu' or
-                        layer_name[0:7] == 'dropout' or
-                        layer_name[0:8] == 'res_relu'):
-                    continue
-                layer_weights = weights_dict[layer_name]
-                layer.set_weights([np.array(w) for w in layer_weights])
+                    # Set the weights for each layer of the network
+                    for layer in self.policy_network.layers:
+                        layer_name = layer.name
+                        if (layer_name[0:5] == 'input' or
+                                layer_name[0:7] == 'res_add' or
+                                layer_name[0:10] == 'value_relu' or
+                                layer_name[0:11] == 'policy_relu' or
+                                layer_name[0:13] == 'value_flatten' or
+                                layer_name[0:14] == 'policy_flatten' or
+                                layer_name[0:10] == 'activation' or
+                                layer_name[0:4] == 'relu' or
+                                layer_name[0:7] == 'dropout' or
+                                layer_name[0:8] == 'res_relu'):
+                            continue
+                        layer_weights = weights_dict[layer_name]
+                        layer.set_weights([np.array(w) for w in layer_weights])
 
-            print(f"Network weights loaded from Redis key '{key_name}'")
+                    print(f"Network weights loaded from Redis key 'policy_{key_name}'")
+            elif network_type == 'value':
+                # Connect to Redis and retrieve the serialized weights
+                serialized_weights = self.redis.get('value_' + key_name)
+
+                if serialized_weights is None:
+                    # Initialize the weights if no weights are found in Redis
+                    raise Exception(f'No weights found in Redis: value_{key_name}')
+
+                else:
+                    # Deserialize the weights from the byte string using NumPy
+                    weights_dict = pickle.loads(serialized_weights)
+
+                    # Set the weights for each layer of the network
+                    for layer in self.value_network.layers:
+                        layer_name = layer.name
+                        if (layer_name[0:5] == 'input' or
+                                layer_name[0:7] == 'res_add' or
+                                layer_name[0:10] == 'value_relu' or
+                                layer_name[0:11] == 'policy_relu' or
+                                layer_name[0:13] == 'value_flatten' or
+                                layer_name[0:14] == 'policy_flatten' or
+                                layer_name[0:10] == 'activation' or
+                                layer_name[0:4] == 'relu' or
+                                layer_name[0:7] == 'dropout' or
+                                layer_name[0:8] == 'res_relu'):
+                            continue
+                        layer_weights = weights_dict[layer_name]
+                        layer.set_weights([np.array(w) for w in layer_weights])
+
+                    print(f"Network weights loaded from Redis key 'value_{key_name}'")
 
     def save_networks(self, key_name):
         self.save_network_weights(key_name)
@@ -210,18 +291,34 @@ class AlphaZeroChess:
 
     def save_network_weights(self, key_name):
         # Convert the weights to a dictionary
-        weights_dict = {}
-        for layer in self.network.layers:
-            if len(layer.get_weights()) > 0:  # Check if the layer has any weights
-                weights_dict[layer.name] = [w.tolist() for w in layer.get_weights()]
 
-        # Serialize the dictionary to a byte string using NumPy
-        pickle_dict = pickle.dumps(weights_dict)
+        for network_type in ['policy', 'value']:
+            weights_dict = {}
+            if network_type == 'policy':
+                for layer in self.policy_network.layers:
+                    if len(layer.get_weights()) > 0:  # Check if the layer has any weights
+                        weights_dict[layer.name] = [w.tolist() for w in layer.get_weights()]
 
-        # Connect to Redis and save the weights using the specified key name
-        self.redis.set(key_name, pickle_dict)
+                # Serialize the dictionary to a byte string using NumPy
+                pickle_dict = pickle.dumps(weights_dict)
 
-        print(f"Network weights saved to Redis key '{key_name}'")
+                # Connect to Redis and save the weights using the specified key name
+                self.redis.set('policy_' + key_name, pickle_dict)
+
+                print(f"Network weights saved to Redis key 'policy_{key_name}'")
+
+            elif network_type == 'value':
+                for layer in self.value_network.layers:
+                    if len(layer.get_weights()) > 0:  # Check if the layer has any weights
+                        weights_dict[layer.name] = [w.tolist() for w in layer.get_weights()]
+
+                # Serialize the dictionary to a byte string using NumPy
+                pickle_dict = pickle.dumps(weights_dict)
+
+                # Connect to Redis and save the weights using the specified key name
+                self.redis.set('value_' + key_name, pickle_dict)
+
+                print(f"Network weights saved to Redis key 'value_{key_name}'")
 
 
 def board_to_input_single(config, node):
@@ -371,7 +468,7 @@ class MCTSTree:
         return policy, policy_uci, temp_adj_policy, policy_array
 
     # @profile
-    def process_mcts(self, node, config, network, eval):
+    def process_mcts(self, node, config, policy_network, value_network, eval):
         if eval is True:
             c_puct = self.config.eval_c_puct
         else:
@@ -382,7 +479,7 @@ class MCTSTree:
             return
         # Select a node to expand
         if len(node.children) == 0:
-            self.expand(node, network)
+            self.expand(node, policy_network, value_network)
             return
 
         # Evaluate the node
@@ -413,7 +510,7 @@ class MCTSTree:
                     best_node = child
 
         # Simulate a game from the best_node
-        self.process_mcts(best_node, config, network, eval)
+        self.process_mcts(best_node, config, policy_network, value_network, eval)
 
         # Backpropagate the results of the simulation
         best_node.Qreward = (best_node.Qreward * best_node.Nvisit + best_node.prior_value) / (best_node.Nvisit + 1)
@@ -422,7 +519,7 @@ class MCTSTree:
         return
 
     # @profile
-    def expand(self, leaf_node, network):
+    def expand(self, leaf_node, policy_network, value_network):
         # Get the policy and value from the neural network
         state = board_to_input(self.config, leaf_node)
         # state_list = state.tolist()  # Convert numpy array to list
@@ -441,7 +538,8 @@ class MCTSTree:
         state_expanded = np.expand_dims(state, axis=0)
         state_ds = tf.data.Dataset.from_tensor_slices(state_expanded)
         state_ds_batched = state_ds.batch(1)
-        pi, v = network.predict(state_ds_batched, verbose=0)
+        pi = policy_network.predict(state_ds_batched, verbose=0)
+        v = value_network.predict(state_ds_batched, verbose=0)
         leaf_node.prior_value = v[0][0]
 
         # Add Dirichlet noise to the prior probabilities

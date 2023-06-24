@@ -51,7 +51,7 @@ if __name__ == '__main__':
     learning_rate = 0.2
     opt_type = 'ada'
     # play seed games
-    outer_agent = AlphaZeroChess(outer_config, network=None)
+    outer_agent = AlphaZeroChess(outer_config, policy_network=None, value_network=None)
     if outer_config.reset_redis is True:
         outer_agent.redis.flushdb()
     if outer_config.reset_network is True:
@@ -86,6 +86,7 @@ if __name__ == '__main__':
                     params_item['learning_rate'] = learning_rate
                     params_item['network_name'] = 'network_current'
                     params_item['game_id'] = start_ind
+                    params_item['run_type'] = 'ray'
 
                     print(f'Starting game {start_ind} of {outer_config.initial_seed_games - 1}')
                     result_id = main_ray_no_gpu.remote(params_item)
