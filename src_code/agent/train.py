@@ -82,15 +82,7 @@ def train_model(pass_dict):
         if len(last_n_val_policy_losses) >= config.early_stopping_epochs:
             if last_n_val_policy_losses[-1] < best_policy_val:
                 best_policy_val = last_n_val_policy_losses[-1]
-                agent.save_networks('policy_network_best_candidate')
-
-        if len(last_n_val_value_losses) > config.early_stopping_epochs:
-            last_n_val_value_losses.pop(0)  # Remove the oldest validation loss
-
-        if len(last_n_val_value_losses) >= config.early_stopping_epochs:
-            if last_n_val_value_losses[-1] < best_value_val:
-                best_value_val = last_n_val_value_losses[-1]
-                agent.save_networks('value_network_best_candidate')
+                agent.save_networks('network_best_candidate')
 
         # Remove sampled games from Redis
         for train_key in [train_key_list[i] for i in random_train_inds]:
@@ -108,11 +100,8 @@ def train_model(pass_dict):
     delete_keys(config, redis_conn, key_list, key_del_list)
 
     # Format the datetime as separate columns for date and time
-    agent.load_networks('policy_network_best_candidate')
-    agent.save_networks('policy_' + network_name_out)
-
-    agent.load_networks('value_network_best_candidate')
-    agent.save_networks('value_' + network_name_out)
+    agent.load_networks('network_best_candidate')
+    agent.save_networks(network_name_out)
 
     gc.collect()
 
