@@ -19,9 +19,11 @@ from src_code.evaluate.utils import delete_redis_key
 
 
 def initialize(in_config):
-    network = create_network(in_config)
-    outer_agent = AlphaZeroChess(in_config, network=network)
-    outer_agent.save_networks('network_current')
+    policy_network = create_network(in_config, network_type='policy')
+    value_network = create_network(in_config, network_type='value')
+    init_agent = AlphaZeroChess(in_config, policy_network=policy_network, value_network=value_network)
+    init_agent.save_networks('network_current')
+    del init_agent
 
 
 @ray.remote(num_gpus=0)
