@@ -106,11 +106,6 @@ class AlphaZeroChess:
                                                         (tf.float64, tf.float64, tf.float64)).batch(
             self.config.batch_size)
 
-        # Check the shape of train_value
-        for inputs, policy_targets, value_targets in train_dataloader:
-            print(value_targets.shape)
-            break  # Print the shape of the first batch only
-
         validation_loss_tot = 0
         validation_loss_cnt = 0
 
@@ -131,7 +126,7 @@ class AlphaZeroChess:
             avg_val_policy_loss = history.history['val_loss'][0]
             avg_val_policy_accuracy = history.history['val_policy_categorical_accuracy'][0]
             avg_val_value_loss = history.history['val_value_loss'][0]
-            avg_val_value_mse = history.history['val_mean_squared_error'][0]
+            avg_val_value_mse = history.history['value_mean_squared_error'][0]
 
             # Print the training and validation metrics
             print(f'Epoch {epoch + 1}:')
