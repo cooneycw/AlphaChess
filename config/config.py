@@ -28,8 +28,8 @@ class Config:
         self.eval_num_iterations = 800
         self.play_iterations = 40
         self.num_evaluation_games = 200
-        self.reset_redis = False
-        self.reset_network = False
+        self.reset_redis = True
+        self.reset_network = True
         self.training_sample = 4600
         self.training_samples = 1
         self.early_stopping_epochs = 1
@@ -39,18 +39,20 @@ class Config:
         self.eps = 0.25  # Starting value for eps
         self.c_puct = 1.5
         self.eval_c_puct = 1.0
-        self.optimizer = None
+        self.policy_optimizer = None
+        self.value_optimizer = None
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter
         self.game_counter = GameCounter()
-        self.ChessDataset = ChessDataset
+        self.ChessPolicyDataset = ChessPolicyDataset
+        self.ChessValueDataset = ChessValueDataset
 
-    def update_train_rate(self, learning_rate, type):
-        if type == 'ada':
+    def update_train_rate(self, learning_rate, opt_type):
+        if opt_type == 'ada':
             self.policy_optimizer = tf.keras.optimizers.Adagrad(learning_rate=learning_rate)
             self.value_optimizer = tf.keras.optimizers.Adagrad(learning_rate=learning_rate)
-        elif type == 'nadam':
+        elif opt_type == 'nadam':
             self.policy_optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
             self.value_optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
 
@@ -118,11 +120,10 @@ class GameCounter:
         self.count = 0
 
 
-class ChessDataset:
-    def __init__(self, states, policy_targets, value_targets):
+class ChessPolicyDataset:
+    def __init__(self, states, policy_targets):
         self.states = states
         self.policy_targets = policy_targets
-        self.value_targets = value_targets
 
     def __len__(self):
         return len(self.states)
@@ -130,8 +131,21 @@ class ChessDataset:
     def __getitem__(self, index):
         state = self.states[index]
         policy_target = self.policy_targets[index]
+        return state, policy_target
+
+
+class ChessValueDataset:
+    def __init__(self, states, value_targets):
+        self.states = states
+        self.value_targets = value_targets
+
+    def __len__(self):
+        return len(self.states)
+
+    def __getitem__(self, index):
+        state = self.states[index]
         value_target = self.value_targets[index]
-        return state, policy_target, value_target
+        return state, value_target
 
 
 def interpolate(start, end, t):

@@ -52,7 +52,8 @@ class AlphaZeroChess:
             self.value_network = value_network
 
         # Assign the optimizer to self.optimizer
-        self.optimizer = config.optimizer
+        self.policy_optimizer = config.policy_optimizer
+        self.value_optimizer = config.value_optimizer
 
         # Initialize the MCTS tree
         self.tree = MCTSTree(self)
@@ -103,12 +104,12 @@ class AlphaZeroChess:
     def update_policy_network(self, train_states, train_policy, train_value, val_states, val_policy, val_value):
         """Update the neural network with the latest training data."""
         # Split the data into training and validation sets
-        train_dataset = self.config.ChessDataset(train_states, train_policy)
+        train_dataset = self.config.ChessPolicyDataset(train_states, train_policy)
         train_dataloader = tf.data.Dataset.from_generator(lambda: train_dataset,
                                                           (tf.float64, tf.float64)).batch(
             self.config.batch_size)
 
-        val_dataset = self.config.ChessDataset(val_states, val_policy)
+        val_dataset = self.config.ChessValueDataset(val_states, val_policy)
         val_dataloader = tf.data.Dataset.from_generator(lambda: val_dataset,
                                                         (tf.float64, tf.float64)).batch(
             self.config.batch_size)
@@ -118,7 +119,6 @@ class AlphaZeroChess:
 
         # Define metrics
         metrics = keras.metrics.CategoricalAccuracy()
-        # metrics = keras.metrics.MeanSquaredError()
 
         # Compile the model before training
         self.policy_network.compile(optimizer=self.policy_optimizer, loss='categorical_crossentropy',
@@ -128,15 +128,16 @@ class AlphaZeroChess:
             # Train the model using the training data
             history = self.policy_network.fit(train_dataloader,
                                        epochs=1,
-                                       validation_data=val_dataloader)
+                                       validation_data=val_dataloader, verbose=0)
 
             avg_train_loss = history.history['loss'][0]
             avg_val_policy_loss = history.history['val_loss'][0]
-            avg_val_policy_accuracy = history.history['val_policy_categorical_accuracy'][0]
+            avg_policy_accuracy = history.history['categorical_accuracy'][0]
+            avg_val_policy_accuracy = history.history['val_categorical_accuracy'][0]
 
             # Print the training and validation metrics
             print(f'Epoch {epoch + 1}:')
-            print(f'Training - Loss: {avg_train_loss:.4f}')
+            print(f'Training - Loss: {avg_train_loss:.4f}, Accuracy: {avg_policy_accuracy:.4f}')
             print(f'Policy Validation - Loss: {avg_val_policy_loss:.4f}, Accuracy: {avg_val_policy_accuracy:.4f}')
 
             validation_loss_tot += avg_val_policy_loss
@@ -148,12 +149,12 @@ class AlphaZeroChess:
         """Update the neural network with the latest training data."""
         # Split the data into training and validation sets
 
-        train_dataset = self.config.ChessDataset(train_states, train_value)
+        train_dataset = self.config.ChessValueDataset(train_states, train_value)
         train_dataloader = tf.data.Dataset.from_generator(lambda: train_dataset,
                                                           (tf.float64, tf.float64)).batch(
             self.config.batch_size)
 
-        val_dataset = self.config.ChessDataset(val_states, val_value)
+        val_dataset = self.config.ChessValueDataset(val_states, val_value)
         val_dataloader = tf.data.Dataset.from_generator(lambda: val_dataset,
                                                         (tf.float64, tf.float64)).batch(
             self.config.batch_size)
@@ -166,22 +167,23 @@ class AlphaZeroChess:
 
         # Compile the model before training
         self.value_network.compile(optimizer=self.value_optimizer, loss='mean_squared_error',
-                                   metrics= metrics)
+                                   metrics=metrics)
 
         for epoch in range(self.config.num_epochs):
             # Train the model using the training data
             history = self.value_network.fit(train_dataloader,
                                        epochs=1,
-                                       validation_data=val_dataloader)
+                                       validation_data=val_dataloader, verbose=0)
 
             avg_train_loss = history.history['loss'][0]
-            avg_val_value_loss = history.history['val_value_loss'][0]
-            avg_val_value_mse = history.history['value_mean_squared_error'][0]
+            avg_val_value_loss = history.history['val_loss'][0]
+            avg_value_mse = history.history['mean_squared_error'][0]
+            avg_val_value_mse = history.history['val_mean_squared_error'][0]
 
             # Print the training and validation metrics
             print(f'Epoch {epoch + 1}:')
-            print(f'Training - Loss: {avg_train_loss:.4f}')
-            print(f'Value Validation - Loss: {avg_val_value_loss:.4f}, Accuracy: {avg_val_value_mse:.4f}')
+            print(f'Training - Loss: {avg_train_loss:.4f}, MSE: {avg_value_mse:.4f}')
+            print(f'Value Validation - Loss: {avg_val_value_loss:.4f}, MSE: {avg_val_value_mse:.4f}')
 
             validation_loss_tot += avg_val_value_loss
             validation_loss_cnt += 1
