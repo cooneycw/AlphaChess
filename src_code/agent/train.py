@@ -42,9 +42,8 @@ def train_model(pass_dict):
         split_data(config, key_list, states, policy_targets, value_targets)
 
     best_policy_val = float('inf')
-    best_value_val = float('inf')
     last_n_val_policy_losses = []
-    last_n_val_value_losses = []
+    best_set = False
     key_del_list = set()
     for j in range(config.training_samples):
         num_train_samples = min(int(0.5 + (config.training_sample * (1-config.validation_split))), len(train_value))
@@ -74,7 +73,6 @@ def train_model(pass_dict):
 
         gc.collect()
         last_n_val_policy_losses.append(policy_validation_loss_tot/policy_validation_loss_cnt)
-        last_n_val_value_losses.append(value_validation_loss_tot /value_validation_loss_cnt)
 
         if len(last_n_val_policy_losses) > config.early_stopping_epochs:
             last_n_val_policy_losses.pop(0)  # Remove the oldest validation loss
@@ -83,6 +81,7 @@ def train_model(pass_dict):
             if last_n_val_policy_losses[-1] < best_policy_val:
                 best_policy_val = last_n_val_policy_losses[-1]
                 agent.save_networks('network_best_candidate')
+                best_set = True
 
         # Remove sampled games from Redis
         for train_key in [train_key_list[i] for i in random_train_inds]:
@@ -96,6 +95,9 @@ def train_model(pass_dict):
             print(f"Early stopping triggered at training episode {j}")
             break
         gc.collect()
+
+    if best_set is False:
+        agent.save_networks('network_best_candidate')
 
     delete_keys(config, redis_conn, key_list, key_del_list)
 

@@ -194,7 +194,8 @@ class AlphaZeroChess:
         for network_type in ['policy', 'value']:
             if network_type == 'policy':
                 # Connect to Redis and retrieve the serialized weights
-                serialized_weights = self.redis.get('policy_' + key_name)
+                pol_name = 'policy_' + key_name
+                serialized_weights = self.redis.get(pol_name)
 
                 if serialized_weights is None:
                     # Initialize the weights if no weights are found in Redis
@@ -211,11 +212,18 @@ class AlphaZeroChess:
                                 layer_name[0:7] == 'res_add' or
                                 layer_name[0:10] == 'value_relu' or
                                 layer_name[0:11] == 'policy_relu' or
+                                layer_name[0:11] == 'policy_conv' or
+                                layer_name[0:9] == 'policy_bn' or
+                                layer_name[0:8] == 'value_bn' or
+                                layer_name[0:10] == 'value_conv' or
                                 layer_name[0:13] == 'value_flatten' or
                                 layer_name[0:14] == 'policy_flatten' or
+                                layer_name[0:14] == 'policy_leakyre' or
                                 layer_name[0:10] == 'activation' or
                                 layer_name[0:4] == 'relu' or
                                 layer_name[0:7] == 'dropout' or
+                                layer_name[0:5] == 'leaky' or
+                                layer_name[0:9] == 'res_leaky' or
                                 layer_name[0:8] == 'res_relu'):
                             continue
                         layer_weights = weights_dict[layer_name]
@@ -224,11 +232,12 @@ class AlphaZeroChess:
                     print(f"Network weights loaded from Redis key 'policy_{key_name}'")
             elif network_type == 'value':
                 # Connect to Redis and retrieve the serialized weights
-                serialized_weights = self.redis.get('value_' + key_name)
+                val_name = 'value_' + key_name
+                serialized_weights = self.redis.get(val_name)
 
                 if serialized_weights is None:
                     # Initialize the weights if no weights are found in Redis
-                    raise Exception(f'No weights found in Redis: value_{key_name}')
+                    raise Exception(f'No weights found in Redis: {val_name}')
 
                 else:
                     # Deserialize the weights from the byte string using NumPy
@@ -240,12 +249,16 @@ class AlphaZeroChess:
                         if (layer_name[0:5] == 'input' or
                                 layer_name[0:7] == 'res_add' or
                                 layer_name[0:10] == 'value_relu' or
+                                layer_name[0:8] == 'value_bn' or
                                 layer_name[0:11] == 'policy_relu' or
                                 layer_name[0:13] == 'value_flatten' or
+                                layer_name[0:13] == 'value_leakyre' or
                                 layer_name[0:14] == 'policy_flatten' or
                                 layer_name[0:10] == 'activation' or
                                 layer_name[0:4] == 'relu' or
+                                layer_name[0:5] == 'leaky' or
                                 layer_name[0:7] == 'dropout' or
+                                layer_name[0:9] == 'res_leaky' or
                                 layer_name[0:8] == 'res_relu'):
                             continue
                         layer_weights = weights_dict[layer_name]
@@ -303,11 +316,11 @@ class AlphaZeroChess:
 
                 # Serialize the dictionary to a byte string using NumPy
                 pickle_dict = pickle.dumps(weights_dict)
-
+                pol_name = 'policy_' + key_name
                 # Connect to Redis and save the weights using the specified key name
-                self.redis.set('policy_' + key_name, pickle_dict)
+                self.redis.set(pol_name, pickle_dict)
 
-                print(f"Network weights saved to Redis key 'policy_{key_name}'")
+                print(f"Network weights saved to Redis key {pol_name}")
 
             elif network_type == 'value':
                 for layer in self.value_network.layers:
@@ -316,11 +329,11 @@ class AlphaZeroChess:
 
                 # Serialize the dictionary to a byte string using NumPy
                 pickle_dict = pickle.dumps(weights_dict)
-
+                val_name = 'value_' + key_name
                 # Connect to Redis and save the weights using the specified key name
-                self.redis.set('value_' + key_name, pickle_dict)
+                self.redis.set(val_name, pickle_dict)
 
-                print(f"Network weights saved to Redis key 'value_{key_name}'")
+                print(f"Network weights saved to Redis key {val_name}")
 
 
 def board_to_input_single(config, node):

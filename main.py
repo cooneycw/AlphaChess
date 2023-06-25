@@ -56,7 +56,7 @@ def main(in_params):
         pass_dict['learning_rate'] = 0.2
         pass_dict['key_prefix'] = key_prefix
         pass_dict['num_iterations'] = num_iterations
-        pass_dict['network_name'] = 'network_test'
+        pass_dict['network_name'] = 'network_current'
         pass_dict['self_play_games'] = num_evals
         pass_dict['run_type'] = 'not_ray'
         play_games(pass_dict)
@@ -66,10 +66,10 @@ def main(in_params):
     elif type == 'train':
         pass_dict = dict()
         pass_dict['network_name'] = 'network_current'
-        pass_dict['network_name_out'] = 'network_test'
-        pass_dict['learning_rate'] = 0.2
+        pass_dict['network_name_out'] = 'network_current'
+        pass_dict['learning_rate'] = 0.01
         pass_dict['verbosity'] = False
-        pass_dict['opt_type'] = 'ada'
+        pass_dict['opt_type'] = 'sgd'
         train_model(pass_dict)
         return f'Finished running the main function with type: {type}'
 
@@ -81,8 +81,9 @@ def main(in_params):
 def initialize(in_config):
     policy_network = create_network(in_config, network_type='policy')
     value_network = create_network(in_config, network_type='value')
-    outer_agent = AlphaZeroChess(in_config, policy_network=policy_network, value_network=value_network)
-    outer_agent.save_networks('network_current')
+    init_agent = AlphaZeroChess(in_config, policy_network=policy_network, value_network=value_network)
+    init_agent.save_networks('network_current')
+    del init_agent
 
 
 if __name__ == '__main__':
@@ -93,6 +94,7 @@ if __name__ == '__main__':
     outer_config = Config(verbosity=False)
 
     if type_list[type_id] == 'initialize':
+        outer_agent = AlphaZeroChess(outer_config, policy_network=None, value_network=None)
         initialize(outer_config)
 
     if type_list[type_id] != 'initialize' and USE_RAY is False:

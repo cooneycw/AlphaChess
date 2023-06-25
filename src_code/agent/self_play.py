@@ -66,7 +66,7 @@ def play_games(pass_dict):
             prior_value_counts = Counter(prior_values)
 
             # Get the top 10 most common values and their counts
-            top_10_values = prior_value_counts.most_common(10)
+            top_10_values = prior_value_counts.most_common(800)
 
             # Display the top 10 values and counts
             for value, count in top_10_values:

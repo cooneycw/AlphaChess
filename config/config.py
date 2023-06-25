@@ -13,7 +13,7 @@ class Config:
         self.redis_port = 6379
         self.redis_db = 0
         # Training settings
-        self.num_epochs = 1
+        self.num_epochs = 2
         self.validation_split = 0.1
         self.batch_size = 32
         self.maximum_moves = 150
@@ -28,8 +28,8 @@ class Config:
         self.eval_num_iterations = 800
         self.play_iterations = 40
         self.num_evaluation_games = 200
-        self.reset_redis = True
-        self.reset_network = True
+        self.reset_redis = False
+        self.reset_network = False
         self.training_sample = 4600
         self.training_samples = 1
         self.early_stopping_epochs = 1
@@ -55,6 +55,9 @@ class Config:
         elif opt_type == 'nadam':
             self.policy_optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
             self.value_optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
+        elif opt_type == 'sgd':
+            self.policy_optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9)
+            self.value_optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9)
 
 
 def create_all_moves_list():
