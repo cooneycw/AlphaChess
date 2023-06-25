@@ -108,7 +108,7 @@ if __name__ == '__main__':
     while agent_ind < outer_config.eval_cycles:
         if agent_ind % 42 == 0 and agent_ind != 0:
             learning_rate = learning_rate * 0.1
-            opt_type = 'nadam'
+            opt_type = 'sgd'
         print(f'Executing train / game play iteration: {agent_ind} of {outer_config.eval_cycles - 1}')
         pre_eval_ind = 0
         pre_eval_result_ids = []
@@ -127,6 +127,7 @@ if __name__ == '__main__':
             train_params['network_name_out'] = network_name_out
             train_params['learning_rate'] = learning_rate
             train_params['opt_type'] = opt_type
+            train_params['run_type'] = 'not_ray'
             train_id = main_ray_gpu.remote(train_params)
 
             result = ray.get(train_id)
@@ -156,6 +157,7 @@ if __name__ == '__main__':
                     params_item['learning_rate'] = learning_rate
                     params_item['network_name'] = network_name_out
                     params_item['game_id'] = pre_eval_ind
+                    params_item['run_type'] = 'not_ray'
 
                     print(f'Starting game {pre_eval_ind} of {outer_config.train_play_games - 1}')
                     result_id = main_ray_no_gpu.remote(params_item)
