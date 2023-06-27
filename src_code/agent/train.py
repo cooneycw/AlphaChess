@@ -57,22 +57,16 @@ def train_model(pass_dict):
         print(f'Sample: {j+1} of {config.training_samples}  Sampled {len(random_train_inds)} training records and {len(random_val_inds)} validation records')
         print(f'Sum of values: {np.sum([train_value[i] for i in random_train_inds])}  Win Absolute Ratio: {int(100 * (0.005 + win_abs_ratio))}%  Win Ratio: {int(100 * (0.005 + win_ratio))}%')
 
-        policy_validation_loss_tot, policy_validation_loss_cnt = agent.update_policy_network([train_states[i] for i in random_train_inds],
+        validation_loss_tot, validation_loss_cnt = agent.update_network([train_states[i] for i in random_train_inds],
                                                                         [train_policy[i] for i in random_train_inds],
                                                                         [train_value[i] for i in random_train_inds],
                                                                         [val_states[j] for j in random_val_inds],
                                                                         [val_policy[j] for j in random_val_inds],
                                                                         [val_value[j] for j in random_val_inds])
 
-        value_validation_loss_tot, value_validation_loss_cnt = agent.update_value_network([train_states[i] for i in random_train_inds],
-                                                                        [train_policy[i] for i in random_train_inds],
-                                                                        [train_value[i] for i in random_train_inds],
-                                                                        [val_states[j] for j in random_val_inds],
-                                                                        [val_policy[j] for j in random_val_inds],
-                                                                        [val_value[j] for j in random_val_inds])
 
         gc.collect()
-        last_n_val_policy_losses.append(policy_validation_loss_tot/policy_validation_loss_cnt)
+        last_n_val_policy_losses.append(validation_loss_tot / validation_loss_cnt)
 
         if len(last_n_val_policy_losses) > config.early_stopping_epochs:
             last_n_val_policy_losses.pop(0)  # Remove the oldest validation loss

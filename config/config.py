@@ -13,7 +13,7 @@ class Config:
         self.redis_port = 6379
         self.redis_db = 0
         # Training settings
-        self.num_epochs = 2
+        self.num_epochs = 1
         self.validation_split = 0.1
         self.batch_size = 32
         self.maximum_moves = 150
@@ -21,15 +21,15 @@ class Config:
         self.min_temperature = 0.01
         self.temperature_threshold = 150
         self.initial_seed_games = 120
-        self.train_play_games = 500
+        self.train_play_games = 1
         self.eval_cycles = 300
         self.game_keys_limit = 250000
         self.num_iterations = 800
         self.eval_num_iterations = 800
         self.play_iterations = 40
-        self.num_evaluation_games = 200
-        self.reset_redis = False
-        self.reset_network = False
+        self.num_evaluation_games = 2
+        self.reset_redis = True
+        self.reset_network = True
         self.training_sample = 4600
         self.training_samples = 1
         self.early_stopping_epochs = 1
@@ -39,25 +39,20 @@ class Config:
         self.eps = 0.25  # Starting value for eps
         self.c_puct = 1.5
         self.eval_c_puct = 1.0
-        self.policy_optimizer = None
-        self.value_optimizer = None
+        self.optimizer = None
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter
         self.game_counter = GameCounter()
-        self.ChessPolicyDataset = ChessPolicyDataset
-        self.ChessValueDataset = ChessValueDataset
+        self.ChessDataset = ChessDataset
 
     def update_train_rate(self, learning_rate, opt_type):
         if opt_type == 'ada':
-            self.policy_optimizer = tf.keras.optimizers.Adagrad(learning_rate=learning_rate)
-            self.value_optimizer = tf.keras.optimizers.Adagrad(learning_rate=learning_rate)
+            self.optimizer = tf.keras.optimizers.Adagrad(learning_rate=learning_rate)
         elif opt_type == 'nadam':
-            self.policy_optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
-            self.value_optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
+            self.optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
         elif opt_type == 'sgd':
-            self.policy_optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9)
-            self.value_optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9)
+            self.optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9)
 
 
 def create_all_moves_list():
@@ -123,23 +118,10 @@ class GameCounter:
         self.count = 0
 
 
-class ChessPolicyDataset:
-    def __init__(self, states, policy_targets):
+class ChessDataset:
+    def __init__(self, states, policy_targets, value_targets):
         self.states = states
         self.policy_targets = policy_targets
-
-    def __len__(self):
-        return len(self.states)
-
-    def __getitem__(self, index):
-        state = self.states[index]
-        policy_target = self.policy_targets[index]
-        return state, policy_target
-
-
-class ChessValueDataset:
-    def __init__(self, states, value_targets):
-        self.states = states
         self.value_targets = value_targets
 
     def __len__(self):
@@ -147,8 +129,9 @@ class ChessValueDataset:
 
     def __getitem__(self, index):
         state = self.states[index]
+        policy_target = self.policy_targets[index]
         value_target = self.value_targets[index]
-        return state, value_target
+        return state, policy_target, value_target
 
 
 def interpolate(start, end, t):

@@ -32,7 +32,6 @@ def play_games(pass_dict):
     run_type = pass_dict['run_type']
     config = Config(verbosity=verbosity)
 
-
     # Play the game
     # Initialize the agent
     agent = AlphaZeroChess(config)
@@ -48,29 +47,23 @@ def play_games(pass_dict):
         player = 'white' if agent.board.turn else 'black'
         uci_move, policy, policy_target = agent.get_action()
 
-        # agent.tree.root.count_nodes()
-        # print(f'Global variables: {print_variable_sizes_pympler(globals())}')
-        # print(f'Local variables: {print_variable_sizes_pympler(locals())}')
-
-        # Take the action and update the board state
-        # print(uci_move)
-        # if player == 'black':
-        #     uci_move = input()
-        #
-
         if run_type != 'ray':
-            # Collect all prior values from nodes
-            prior_values = [node.prior_value for node in agent.tree.root.all_nodes]
+            # Collect all prior values and node names from nodes
+            prior_values = [(node.name, node.prior_value) for node in
+                            list(agent.tree.root.children)]
 
-            # Count the occurrences of each prior value
-            prior_value_counts = Counter(prior_values)
+            # Sort the prior values in ascending order
+            sorted_values = sorted(prior_values, key=lambda x: x[1])
 
-            # Get the top 10 most common values and their counts
-            top_10_values = prior_value_counts.most_common(800)
+            # Display the bottom 10 nodes (lowest prior values)
+            print("Bottom 10 nodes:")
+            for name, value in sorted_values[:10]:
+                print(f"Node: {name}, Prior Value: {value}")
 
-            # Display the top 10 values and counts
-            for value, count in top_10_values:
-                print(f"Value: {value}, Count: {count}")
+            # Display the top 10 nodes (highest prior values)
+            print("\nTop 10 nodes:")
+            for name, value in sorted_values[-10:]:
+                print(f"Node: {name}, Prior Value: {value}")
 
         agent.board.push_uci(uci_move)
 
@@ -149,9 +142,9 @@ def play_games(pass_dict):
             elif agent.board.result(claim_draw=True) == '1/2-1/2':
                 # modify for white players
                 if player == 'white':
-                    value_target = 0.25
+                    value_target = 0
                 else:
-                    value_target = -0.25
+                    value_target = -0
             else:
                 value_target = 0
 

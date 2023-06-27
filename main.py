@@ -56,7 +56,7 @@ def main(in_params):
         pass_dict['learning_rate'] = 0.2
         pass_dict['key_prefix'] = key_prefix
         pass_dict['num_iterations'] = num_iterations
-        pass_dict['network_name'] = 'network_current'
+        pass_dict['network_name'] = 'network_current_00496'
         pass_dict['self_play_games'] = num_evals
         pass_dict['run_type'] = 'not_ray'
         play_games(pass_dict)
@@ -79,22 +79,21 @@ def main(in_params):
 
 
 def initialize(in_config):
-    policy_network = create_network(in_config, network_type='policy')
-    value_network = create_network(in_config, network_type='value')
-    init_agent = AlphaZeroChess(in_config, policy_network=policy_network, value_network=value_network)
+    network = create_network(in_config)
+    init_agent = AlphaZeroChess(in_config, network=network)
     init_agent.save_networks('network_current')
     del init_agent
 
 
 if __name__ == '__main__':
     type_list = ['initialize', 'create_training_data', 'train', 'evaluate', 'play']
-    type_id = 1
+    type_id = 0
 
     min_iterations = 800
     outer_config = Config(verbosity=False)
 
     if type_list[type_id] == 'initialize':
-        outer_agent = AlphaZeroChess(outer_config, policy_network=None, value_network=None)
+        outer_agent = AlphaZeroChess(outer_config, network=None)
         initialize(outer_config)
 
     if type_list[type_id] != 'initialize' and USE_RAY is False:

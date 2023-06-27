@@ -19,9 +19,8 @@ from src_code.evaluate.utils import delete_redis_key
 
 
 def initialize(in_config):
-    policy_network = create_network(in_config, network_type='policy')
-    value_network = create_network(in_config, network_type='value')
-    init_agent = AlphaZeroChess(in_config, policy_network=policy_network, value_network=value_network)
+    network = create_network(in_config)
+    init_agent = AlphaZeroChess(in_config,network=network)
     init_agent.save_networks('network_current')
     del init_agent
 
@@ -42,7 +41,9 @@ def main(in_params):
     elif in_params['action'] == 'train':
         train_model(in_params)
     elif in_params['action'] == 'evaluate':
-        run_evaluation(in_params)
+        result = run_evaluation(in_params)
+        print(f'Result of evaluation {in_params["eval_game_id"]} is: {result}')
+        return result
 
 
 if __name__ == '__main__':
@@ -53,7 +54,7 @@ if __name__ == '__main__':
     learning_rate = 0.01
     opt_type = 'sgd'
     # play seed games
-    outer_agent = AlphaZeroChess(outer_config, policy_network=None, value_network=None)
+    outer_agent = AlphaZeroChess(outer_config, network=None)
     if outer_config.reset_redis is True:
         outer_agent.redis.flushdb()
     if outer_config.reset_network is True:
