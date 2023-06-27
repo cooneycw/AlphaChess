@@ -30,6 +30,7 @@ def play_games(pass_dict):
     learning_rate = pass_dict['learning_rate']
     network_name = pass_dict['network_name']
     run_type = pass_dict['run_type']
+    pre_play = pass_dict['pre_play']
     config = Config(verbosity=verbosity)
 
     # Play the game
@@ -45,7 +46,7 @@ def play_games(pass_dict):
     while not agent.game_over() and not game_limit_stop:
         # Get the current state of the board
         player = 'white' if agent.board.turn else 'black'
-        uci_move, policy, policy_target = agent.get_action()
+        uci_move, policy, policy_target = agent.get_action(pre_play=pre_play)
 
         if run_type != 'ray':
             # Collect all prior values and node names from nodes

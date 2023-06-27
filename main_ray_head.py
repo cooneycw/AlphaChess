@@ -85,6 +85,7 @@ if __name__ == '__main__':
                 if num_workers > len(running_tasks):
                     params_item = dict()
                     params_item['action'] = 'play'
+                    params_item['pre_play'] = True
                     params_item['verbosity'] = verbosity
                     params_item['learning_rate'] = learning_rate
                     params_item['network_name'] = 'network_current'
@@ -154,6 +155,7 @@ if __name__ == '__main__':
                 if num_workers > len(running_tasks):
                     params_item = dict()
                     params_item['action'] = 'play'
+                    params_item['pre_play'] = False
                     params_item['verbosity'] = verbosity
                     params_item['learning_rate'] = learning_rate
                     params_item['network_name'] = network_name_out

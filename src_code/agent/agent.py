@@ -59,16 +59,18 @@ class AlphaZeroChess:
         self.move_counter = self.config.MoveCounter()
 
     # @profile
-    def get_action(self, iters=None, eval=False):
+    def get_action(self, iters=None, pre_play=False, eval=False):
         if iters is None:
             iters = self.config.num_iterations
         if eval is True:
             iters = self.config.eval_num_iterations
+        if pre_play is True:
+            iters = self.config.preplay_num_iterations
 
         """Get the best action to take given the current state of the board."""
         """Uses dirichlet noise to encourage exploration in place of temperature."""
         while self.sim_counter.get_count() < iters:
-            self.tree.process_mcts(self.tree.root, self.config, self.network, eval)
+            self.tree.process_mcts(self.tree.root, self.config, self.network, eval, pre_play)
             self.sim_counter.increment()
             if self.config.verbosity is True:
                 if self.sim_counter.get_count() % 100 == 0:
@@ -117,12 +119,12 @@ class AlphaZeroChess:
             # Train the model using the training data
             history = self.network.fit(train_dataloader,
                                        epochs=1,
-                                       validation_data=val_dataloader)
+                                       validation_data=val_dataloader, verbose=0)
             avg_train_loss = history.history['loss'][0]
             avg_val_policy_loss = history.history['val_loss'][0]
-            avg_val_policy_accuracy = history.history['val_policy_categorical_accuracy'][0]
-            avg_val_value_loss = history.history['val_value_loss'][0]
-            avg_val_value_mse = history.history['val_mean_squared_error'][0]
+            avg_val_policy_accuracy = history.history['val_policy_dense_categorical_accuracy'][0]
+            avg_val_value_loss = history.history['val_value_dense2_loss'][0]
+            avg_val_value_mse = history.history['val_value_dense2_mean_squared_error'][0]
 
             # Print the training and validation metrics
             print(f'Epoch {epoch + 1}:')
@@ -372,7 +374,7 @@ class MCTSTree:
         return policy, policy_uci, temp_adj_policy, policy_array
 
     # @profile
-    def process_mcts(self, node, config, network, eval):
+    def process_mcts(self, node, config, network, eval, pre_play):
         if eval is True:
             c_puct = self.config.eval_c_puct
         else:
@@ -383,7 +385,7 @@ class MCTSTree:
             return
         # Select a node to expand
         if len(node.children) == 0:
-            self.expand(node, network)
+            self.expand(node, network, pre_play)
             return
 
         # Evaluate the node
@@ -414,7 +416,7 @@ class MCTSTree:
                     best_node = child
 
         # Simulate a game from the best_node
-        self.process_mcts(best_node, config, network, eval)
+        self.process_mcts(best_node, config, network, eval, pre_play)
 
         # Backpropagate the results of the simulation
         best_node.Qreward = (best_node.Qreward * best_node.Nvisit + best_node.prior_value) / (best_node.Nvisit + 1)
@@ -423,7 +425,7 @@ class MCTSTree:
         return
 
     # @profile
-    def expand(self, leaf_node, network):
+    def expand(self, leaf_node, network, pre_play):
         # Get the policy and value from the neural network
         state = board_to_input(self.config, leaf_node)
         # state_list = state.tolist()  # Convert numpy array to list
@@ -443,7 +445,10 @@ class MCTSTree:
         state_ds = tf.data.Dataset.from_tensor_slices(state_expanded)
         state_ds_batched = state_ds.batch(1)
         pi, v = network.predict(state_ds_batched, verbose=0)
-        leaf_node.prior_value = v[0][0]
+        if pre_play is False:
+            leaf_node.prior_value = v[0][0]
+        else:
+            leaf_node.prior_value = 0
 
         # Add Dirichlet noise to the prior probabilities
         if leaf_node.name == 'root':
