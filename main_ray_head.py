@@ -89,7 +89,7 @@ if __name__ == '__main__':
                     params_item['learning_rate'] = learning_rate
                     params_item['network_name'] = 'network_current'
                     params_item['game_id'] = start_ind
-                    params_item['run_type'] = 'ray'
+                    params_item['run_type'] = 'not_ray'
 
                     print(f'Starting game {start_ind} of {outer_config.initial_seed_games - 1}')
                     result_id = main_ray_no_gpu.remote(params_item)
