@@ -232,7 +232,7 @@ def board_to_input_single(config, node):
     # Create an empty 8x8x119 tensor
     piece_map = {'p': 0, 'n': 1, 'b': 2, 'r': 3, 'q': 4, 'k': 5}
     # input_tensor = np.zeros((config.board_size, config.board_size, config.num_channels))
-    input_tensor = np.zeros((config.board_size, config.board_size, 14), dtype=np.uint8)
+    input_tensor = np.zeros((config.board_size, config.board_size, 14), dtype=np.float32)
 
     board_ind = 0
     curr_board = None
@@ -260,17 +260,17 @@ def board_to_input_single(config, node):
         pass
     elif last_move == last_move_1:
         if last_move_1 == last_move_2:
-            reps = 2
+            reps = 2 / 2
         else:
-            reps = 1
+            reps = 1 / 2
 
     if opp_last_move is None:
         pass
     elif opp_last_move == opp_last_move_1:
         if opp_last_move_1 == opp_last_move_2:
-            opp_reps = 2
+            opp_reps = 2 / 2
         else:
-            opp_reps = 1
+            opp_reps = 1 / 2
 
     if curr_board.turn is True:
         input_tensor[:, :, (board_ind * 14) + 12] = reps
@@ -284,7 +284,7 @@ def board_to_input_single(config, node):
 
 def board_to_input(config, node):
     # Create an empty 8x8x119 tensor
-    input_tensor = np.zeros((config.board_size, config.board_size, config.num_channels), dtype=np.uint8)
+    input_tensor = np.zeros((config.board_size, config.board_size, config.num_channels), dtype=np.float32)
 
     board_ind = 0
     curr_board = None
@@ -307,7 +307,7 @@ def board_to_input(config, node):
     input_tensor[:, :, 112] = (node.board.turn * 1.0)
 
     # Encode the fullmove number in channel 14
-    input_tensor[:, :, 113] = node.board.fullmove_number
+    input_tensor[:, :, 113] = node.board.fullmove_number / config.maximum_moves
 
     if node.prior_moves[0] is not None:
         is_white_kingside_castle = node.prior_moves[0] == chess.Move.from_uci("e1g1")
@@ -325,7 +325,7 @@ def board_to_input(config, node):
             input_tensor[:, :, 117] = 1
 
     # Encode the "no progress" count in channel 118
-    input_tensor[:, :, 118] = min(255, node.board.halfmove_clock)
+    input_tensor[:, :, 118] = node.board.halfmove_clock / config.maximum_moves
 
     return input_tensor
 

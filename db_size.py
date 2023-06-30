@@ -28,7 +28,7 @@ az_key_tuples = [tuple(key.split('_')) for key in az_keys]
 for i, key in enumerate(az_keys):
     filter_values = az_key_tuples[i]
     value = pickle.loads(redis_client.get(key))
-    board = input_to_board(value['state'])
+    board = binput_to_board(value['state'])
     move_index = np.argwhere(value['policy_target'] != 0).flatten()
     moves_and_values = [(config.all_chess_moves[index], value['policy_target'][index]) for index in move_index]
     moves_and_values.sort(key=lambda x: x[1], reverse=True)

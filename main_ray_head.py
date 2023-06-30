@@ -51,8 +51,8 @@ if __name__ == '__main__':
     verbosity = False
 
     outer_config = Config(verbosity=verbosity)
-    learning_rate = 0.05
-    opt_type = 'sgd'
+    learning_rate = 0.2
+    opt_type = 'ada'
     # play seed games
     outer_agent = AlphaZeroChess(outer_config, network=None)
     if outer_config.reset_redis is True:
