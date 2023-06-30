@@ -31,7 +31,7 @@ class Config:
         self.num_evaluation_games = 400
         self.reset_redis = True
         self.reset_network = True
-        self.training_sample = 4600
+        self.training_sample = 9200
         self.training_samples = 1
         self.early_stopping_epochs = 1
         self.reward_discount = 1.00
