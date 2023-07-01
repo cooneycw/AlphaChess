@@ -8,11 +8,10 @@ def leaky_relu(x, alpha=0.2):
     return tf.maximum(x, alpha * x)
 
 
-def residual_block(x, filters, block_idx, l1, l2, dropout_rate):
+def residual_block(x, filters, block_idx, l1, l2):
     y = Conv2D(filters, kernel_size=3, padding='same', kernel_regularizer=l1_l2(l1=l1, l2=l2), name=f'res_conv1_block{block_idx}')(x)
     y = BatchNormalization(name=f'res_bn1_block{block_idx}')(y)
     y = Activation(leaky_relu, name=f'res_leakyrelu1_block{block_idx}')(y)
-    y = Dropout(dropout_rate)(y)
     y = Conv2D(filters, kernel_size=3, padding='same', kernel_regularizer=l1_l2(l1=l1, l2=l2), name=f'res_conv2_block{block_idx}')(y)
     y = BatchNormalization(name=f'res_bn2_block{block_idx}')(y)
     y = Add(name=f'res_add_block{block_idx}')([x, y])
