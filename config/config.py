@@ -50,6 +50,8 @@ class Config:
     def update_train_rate(self, learning_rate, opt_type):
         if opt_type == 'ada':
             self.optimizer = tf.keras.optimizers.Adagrad(learning_rate=learning_rate)
+        elif opt_type == 'adam':
+            self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
         elif opt_type == 'nadam':
             self.optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
         elif opt_type == 'sgd':

@@ -112,27 +112,43 @@ class AlphaZeroChess:
 
         # Define metrics
         metrics = [keras.metrics.CategoricalAccuracy(), keras.metrics.MeanSquaredError()]
+
+        # Define the maximum gradient norm for clipping
+        max_gradient_norm = 1.0
+
         # Compile the model before training
         self.network.compile(optimizer=self.optimizer, loss=['categorical_crossentropy', 'mean_squared_error'],
                              metrics=metrics)
+
         for epoch in range(self.config.num_epochs):
             # Train the model using the training data
-            history = self.network.fit(train_dataloader,
-                                       epochs=1,
-                                       validation_data=val_dataloader, verbose=0)
-            avg_train_loss = history.history['loss'][0]
-            avg_val_policy_loss = history.history['val_loss'][0]
-            avg_val_policy_accuracy = history.history['val_policy_dense_categorical_accuracy'][0]
-            avg_val_value_loss = history.history['val_value_dense2_loss'][0]
-            avg_val_value_mse = history.history['val_value_dense2_mean_squared_error'][0]
+            for batch_inputs, batch_targets in train_dataloader:
+                with tf.GradientTape() as tape:
+                    predictions = self.network(batch_inputs)
+                    losses = self.network.loss(batch_targets, predictions)
+
+                gradients = tape.gradient(losses, self.network.trainable_variables)
+                clipped_gradients, _ = tf.clip_by_global_norm(gradients, max_gradient_norm)
+                self.optimizer.apply_gradients(zip(clipped_gradients, self.network.trainable_variables))
+
+            # Evaluate on the validation data
+            val_metrics = self.network.evaluate(val_dataloader)
+
+            avg_train_loss = losses[0]
+            avg_val_policy_loss = val_metrics[0]
+            avg_val_policy_accuracy = val_metrics[1]
+            avg_val_value_loss = val_metrics[2]
+            avg_val_value_mse = val_metrics[3]
 
             # Print the training and validation metrics
             print(f'Epoch {epoch + 1}:')
             print(f'Training - Loss: {avg_train_loss:.4f}')
             print(f'Policy Validation - Loss: {avg_val_policy_loss:.4f}, Accuracy: {avg_val_policy_accuracy:.4f}')
             print(f'Value Validation - Loss: {avg_val_value_loss:.4f}, Accuracy: {avg_val_value_mse:.4f}')
+
             validation_loss_tot += avg_val_policy_loss + avg_val_value_loss
             validation_loss_cnt += 1
+
         return validation_loss_tot, validation_loss_cnt
 
     def load_network_weights(self, key_name):
