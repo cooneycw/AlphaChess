@@ -31,7 +31,7 @@ class Config:
         self.num_evaluation_games = 400
         self.reset_redis = False
         self.reset_network = True
-        self.training_sample = 9200
+        self.training_sample = 4600
         self.training_samples = 1
         self.early_stopping_epochs = 1
         self.reward_discount = 1.00
@@ -41,6 +41,7 @@ class Config:
         self.c_puct = 1.5
         self.eval_c_puct = 1.0
         self.optimizer = None
+        self.max_gradient_norm = 1.0
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter

@@ -106,48 +106,61 @@ class AlphaZeroChess:
         val_dataloader = tf.data.Dataset.from_generator(lambda: val_dataset,
                                                         (tf.float64, tf.float64, tf.float64)).batch(
             self.config.batch_size)
-
         validation_loss_tot = 0
         validation_loss_cnt = 0
-
-        # Define metrics
-        metrics = [keras.metrics.CategoricalAccuracy(), keras.metrics.MeanSquaredError()]
-
-        # Define the maximum gradient norm for clipping
-        max_gradient_norm = 1.0
-
-        # Compile the model before training
-        self.network.compile(optimizer=self.optimizer, loss=['categorical_crossentropy', 'mean_squared_error'],
-                             metrics=metrics)
-
         for epoch in range(self.config.num_epochs):
+            avg_train_loss = 0
+            avg_train_accuracy = 0
+            num_train_batches = 0
             # Train the model using the training data
-            for batch_inputs, batch_targets in train_dataloader:
+            for inputs, policy_targets, value_targets in train_dataloader:
                 with tf.GradientTape() as tape:
-                    predictions = self.network(batch_inputs)
-                    losses = self.network.loss(batch_targets, predictions)
+                    policy_preds, value_preds = self.network(inputs, training=True)
+                    value_loss = keras.losses.mean_squared_error(value_targets, value_preds)
+                    policy_loss = keras.losses.categorical_crossentropy(policy_targets, policy_preds)
+                    loss = value_loss + policy_loss
 
-                gradients = tape.gradient(losses, self.network.trainable_variables)
-                clipped_gradients, _ = tf.clip_by_global_norm(gradients, max_gradient_norm)
+                # Compute gradients
+                gradients = tape.gradient(loss, self.network.trainable_variables)
+
+                # Apply gradient clipping
+                clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.config.max_gradient_norm)
+
+                # Update the model parameters with clipped gradients
                 self.optimizer.apply_gradients(zip(clipped_gradients, self.network.trainable_variables))
 
-            # Evaluate on the validation data
-            val_metrics = self.network.evaluate(val_dataloader)
+                avg_train_loss += loss.numpy().mean()
+                policy_accuracy = tf.reduce_mean(
+                    tf.cast(tf.equal(tf.argmax(policy_targets, axis=1), tf.argmax(policy_preds, axis=1)), tf.float64))
+                avg_train_accuracy += policy_accuracy.numpy()
+                num_train_batches += 1
 
-            avg_train_loss = losses[0]
-            avg_val_policy_loss = val_metrics[0]
-            avg_val_policy_accuracy = val_metrics[1]
-            avg_val_value_loss = val_metrics[2]
-            avg_val_value_mse = val_metrics[3]
+            avg_train_loss /= num_train_batches
+            avg_train_accuracy /= num_train_batches
 
-            # Print the training and validation metrics
-            print(f'Epoch {epoch + 1}:')
-            print(f'Training - Loss: {avg_train_loss:.4f}')
-            print(f'Policy Validation - Loss: {avg_val_policy_loss:.4f}, Accuracy: {avg_val_policy_accuracy:.4f}')
-            print(f'Value Validation - Loss: {avg_val_value_loss:.4f}, Accuracy: {avg_val_value_mse:.4f}')
+            # Evaluate the model on the validation data
+            avg_val_loss = 0
+            avg_val_accuracy = 0
+            num_val_batches = 0
+            for inputs, policy_targets, value_targets in val_dataloader:
+                policy_preds, value_preds = self.network(inputs, training=False)
+                value_loss = keras.losses.mean_squared_error(value_targets, value_preds)
+                policy_loss = keras.losses.categorical_crossentropy(policy_targets, policy_preds)
+                loss = value_loss + policy_loss
+                avg_val_loss += loss.numpy().mean()
+                policy_accuracy = tf.reduce_mean(
+                    tf.cast(tf.equal(tf.argmax(policy_targets, axis=1), tf.argmax(policy_preds, axis=1)), tf.float64))
+                avg_val_accuracy += policy_accuracy.numpy()
+                num_val_batches += 1
+                validation_loss_tot += avg_val_loss
+                validation_loss_cnt += num_val_batches
 
-            validation_loss_tot += avg_val_policy_loss + avg_val_value_loss
-            validation_loss_cnt += 1
+            avg_val_loss /= num_val_batches
+            avg_val_accuracy /= num_val_batches
+
+            print(f'Train Batches: {num_train_batches}  Val Batches: {num_val_batches}')
+            print(
+                f'Epoch {epoch + 1}: Train Loss: {avg_train_loss:.4f}, Train Accuracy: {avg_train_accuracy:.4f}, Val Loss: {avg_val_loss:.4f}, Val Accuracy: {avg_val_accuracy:.4f}')
 
         return validation_loss_tot, validation_loss_cnt
 
