@@ -116,9 +116,15 @@ class AlphaZeroChess:
             # Train the model using the training data
             for inputs, policy_targets, value_targets in train_dataloader:
                 with tf.GradientTape() as tape:
+                    value_targets = tf.expand_dims(value_targets, 1)
                     policy_preds, value_preds = self.network(inputs, training=True)
-                    value_loss = keras.losses.mean_squared_error(value_targets, value_preds)
-                    policy_loss = keras.losses.categorical_crossentropy(policy_targets, policy_preds)
+
+                    value_loss_per_instance = keras.losses.mean_squared_error(value_targets, value_preds)
+                    value_loss = tf.reduce_mean(value_loss_per_instance)
+
+                    policy_loss_per_instance = keras.losses.categorical_crossentropy(policy_targets, policy_preds)
+                    policy_loss = tf.reduce_mean(policy_loss_per_instance)
+
                     loss = value_loss + policy_loss
 
                 # Compute gradients
@@ -130,7 +136,7 @@ class AlphaZeroChess:
                 # Update the model parameters with clipped gradients
                 self.optimizer.apply_gradients(zip(clipped_gradients, self.network.trainable_variables))
 
-                avg_train_loss += loss.numpy().mean()
+                avg_train_loss += loss
                 value_mae = tf.reduce_mean(
                     tf.abs(tf.cast(value_targets, tf.float32) - tf.cast(value_preds, tf.float32)))
                 avg_train_value_mae += value_mae.numpy()
@@ -149,11 +155,18 @@ class AlphaZeroChess:
             avg_val_value_mae = 0
             num_val_batches = 0
             for inputs, policy_targets, value_targets in val_dataloader:
+                value_targets = tf.expand_dims(value_targets, 1)
                 policy_preds, value_preds = self.network(inputs, training=False)
-                value_loss = keras.losses.mean_squared_error(value_targets, value_preds)
-                policy_loss = keras.losses.categorical_crossentropy(policy_targets, policy_preds)
+
+                value_loss_per_instance = keras.losses.mean_squared_error(value_targets, value_preds)
+                value_loss = tf.reduce_mean(value_loss_per_instance)
+
+                policy_loss_per_instance = keras.losses.categorical_crossentropy(policy_targets, policy_preds)
+                policy_loss = tf.reduce_mean(policy_loss_per_instance)
+
                 loss = value_loss + policy_loss
-                avg_val_loss += loss.numpy().mean()
+
+                avg_val_loss += loss
                 policy_accuracy = tf.reduce_mean(
                     tf.cast(tf.equal(tf.argmax(policy_targets, axis=1), tf.argmax(policy_preds, axis=1)), tf.float64))
                 avg_val_accuracy += policy_accuracy.numpy()
