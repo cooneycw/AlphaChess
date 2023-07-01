@@ -111,6 +111,7 @@ class AlphaZeroChess:
         for epoch in range(self.config.num_epochs):
             avg_train_loss = 0
             avg_train_accuracy = 0
+            avg_train_value_mae = 0
             num_train_batches = 0
             # Train the model using the training data
             for inputs, policy_targets, value_targets in train_dataloader:
@@ -130,6 +131,9 @@ class AlphaZeroChess:
                 self.optimizer.apply_gradients(zip(clipped_gradients, self.network.trainable_variables))
 
                 avg_train_loss += loss.numpy().mean()
+                value_mae = tf.reduce_mean(
+                    tf.abs(tf.cast(value_targets, tf.float32) - tf.cast(value_preds, tf.float32)))
+                avg_train_value_mae += value_mae.numpy()
                 policy_accuracy = tf.reduce_mean(
                     tf.cast(tf.equal(tf.argmax(policy_targets, axis=1), tf.argmax(policy_preds, axis=1)), tf.float64))
                 avg_train_accuracy += policy_accuracy.numpy()
@@ -137,10 +141,12 @@ class AlphaZeroChess:
 
             avg_train_loss /= num_train_batches
             avg_train_accuracy /= num_train_batches
+            avg_train_value_mae /= num_train_batches
 
             # Evaluate the model on the validation data
             avg_val_loss = 0
             avg_val_accuracy = 0
+            avg_val_value_mae = 0
             num_val_batches = 0
             for inputs, policy_targets, value_targets in val_dataloader:
                 policy_preds, value_preds = self.network(inputs, training=False)
@@ -151,16 +157,21 @@ class AlphaZeroChess:
                 policy_accuracy = tf.reduce_mean(
                     tf.cast(tf.equal(tf.argmax(policy_targets, axis=1), tf.argmax(policy_preds, axis=1)), tf.float64))
                 avg_val_accuracy += policy_accuracy.numpy()
+                value_mae = tf.reduce_mean(
+                    tf.abs(tf.cast(value_targets, tf.float32) - tf.cast(value_preds, tf.float32)))
+                avg_val_value_mae += value_mae.numpy()
+
                 num_val_batches += 1
                 validation_loss_tot += avg_val_loss
                 validation_loss_cnt += num_val_batches
 
             avg_val_loss /= num_val_batches
             avg_val_accuracy /= num_val_batches
+            avg_val_value_mae /= num_val_batches
 
-            print(f'Train Batches: {num_train_batches}  Val Batches: {num_val_batches}')
-            print(
-                f'Epoch {epoch + 1}: Train Loss: {avg_train_loss:.4f}, Train Accuracy: {avg_train_accuracy:.4f}, Val Loss: {avg_val_loss:.4f}, Val Accuracy: {avg_val_accuracy:.4f}')
+            print(f'Epoch: {epoch+1} Train Batches: {num_train_batches}  Val Batches: {num_val_batches}')
+            print(f'Train Loss: {avg_train_loss:.4f}, Train Accuracy: {avg_train_accuracy:.4f}, Val Loss: {avg_val_loss:.4f}, Val Accuracy: {avg_val_accuracy:.4f}')
+            print(f'Train Value MAE: {avg_train_value_mae:.4f}, Val Value MAE: {avg_val_value_mae:.4f}')
 
         return validation_loss_tot, validation_loss_cnt
 
