@@ -57,6 +57,8 @@ class Config:
             self.optimizer = tf.keras.optimizers.Nadam(learning_rate=learning_rate)
         elif opt_type == 'sgd':
             self.optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9)
+        elif opt_type == 'adamax':
+            self.optimizer = tf.keras.optimizers.Adamax(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
 
 
 def create_all_moves_list():
