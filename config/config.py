@@ -30,7 +30,7 @@ class Config:
         self.play_iterations = 40
         self.num_evaluation_games = 400
         self.reset_redis = False
-        self.reset_network = True
+        self.reset_network = False
         self.training_sample = 4600
         self.training_samples = 1
         self.early_stopping_epochs = 1
@@ -39,9 +39,9 @@ class Config:
         self.dirichlet_alpha = 0.3  # Starting value for alpha
         self.eps = 0.25  # Starting value for eps
         self.c_puct = 1.5
-        self.eval_c_puct = 1.0
+        self.eval_c_puct = self.c_puct
         self.optimizer = None
-        self.max_gradient_norm = 1.0
+        self.max_gradient_norm = 1.5
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter
