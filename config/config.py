@@ -39,7 +39,7 @@ class Config:
         self.dirichlet_alpha = 0.3  # Starting value for alpha
         self.eps = 0.25  # Starting value for eps
         self.c_puct = 1.5
-        self.eval_c_puct = self.c_puct
+        self.eval_c_puct = 1.0
         self.optimizer = None
         self.max_gradient_norm = 1.5
         self.verbosity = verbosity
