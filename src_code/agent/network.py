@@ -37,6 +37,7 @@ def create_network(config, l1=0.00001, l2=0.000001, dropout_rate=0.5):
     v = Activation(leaky_relu, name='value_leakyrelu')(v)
     v = Flatten(name='value_flatten')(v)
     v = Dense(256, activation='relu', kernel_initializer='glorot_uniform', name='value_dense1')(v)
+    v = Dropout(dropout_rate=dropout_rate)(v)
     v = Dense(1, activation='tanh', kernel_initializer='glorot_uniform', name='value_dense2')(v)
 
     # Policy head
@@ -44,6 +45,7 @@ def create_network(config, l1=0.00001, l2=0.000001, dropout_rate=0.5):
     p = BatchNormalization(name='policy_bn')(p)
     p = Activation(leaky_relu, name='policy_leakyrelu')(p)
     p = Flatten(name='policy_flatten')(p)
+    p = Dropout(dropout_rate=dropout_rate)(p)
     p = Dense(config.action_space_size, kernel_initializer='glorot_uniform', activation='softmax', name='policy_dense')(p)
     model = tf.keras.Model(inputs=inputs, outputs=[p, v])
 

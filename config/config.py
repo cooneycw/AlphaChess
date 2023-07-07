@@ -30,7 +30,7 @@ class Config:
         self.play_iterations = 40
         self.num_evaluation_games = 400
         self.reset_redis = False
-        self.reset_network = False
+        self.reset_network = True
         self.training_sample = 4600
         self.training_samples = 1
         self.early_stopping_epochs = 1
@@ -41,6 +41,7 @@ class Config:
         self.c_puct = 1.5
         self.eval_c_puct = 1.0
         self.optimizer = None
+        self.weight_decay = 0.00001
         self.max_gradient_norm = 1.5
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
@@ -59,6 +60,8 @@ class Config:
             self.optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9)
         elif opt_type == 'adamax':
             self.optimizer = tf.keras.optimizers.Adamax(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
+        elif opt_type == 'adamw':
+            self.optimizer = tf.keras.optimizers.AdamW(learning_rate=learning_rate, weight_decay=self.weight_decay)
 
 
 def create_all_moves_list():
