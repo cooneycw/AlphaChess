@@ -37,7 +37,6 @@ def create_network(config, l1=0.00001, l2=0.000001, dropout_rate=0.5):
     v = Activation(leaky_relu, name='value_leakyrelu')(v)
     v = Flatten(name='value_flatten')(v)
     v = Dense(256, activation='relu', kernel_initializer='glorot_uniform', name='value_dense1')(v)
-    v = Dropout(dropout_rate)(v)
     v = Dense(1, activation='tanh', kernel_initializer='glorot_uniform', name='value_dense2')(v)
 
     # Policy head
