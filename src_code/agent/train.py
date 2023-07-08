@@ -28,6 +28,7 @@ def train_model(pass_dict):
     value_targets = train_data['value_targets']
     # Get a list of keys and shuffle them
 
+    print(f'splitting records for test / train...')
     train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value = \
         split_data(config, key_list, states, policy_targets, value_targets)
 

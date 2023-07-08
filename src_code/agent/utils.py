@@ -189,7 +189,6 @@ def load_and_process_data(agent, verbosity, batch_size=1000):
         'states': [],
         'policy_targets': [],
         'value_targets': [],
-        'key_list': [],
     }
     keys = scan_redis_for_training_data(agent, 'azChess')
     # Load and process the selected keys
@@ -201,6 +200,7 @@ def load_and_process_data(agent, verbosity, batch_size=1000):
             data_dict['states'].append(data['state'])
             data_dict['policy_targets'].append(data['policy_target'])
             data_dict['value_targets'].append(data['value_target'])
-            data_dict['key_list'].append(batch_keys)
+
+    data_dict['key_list'] = keys
 
     return data_dict
