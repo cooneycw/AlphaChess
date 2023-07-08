@@ -15,28 +15,18 @@ def train_model(pass_dict):
     learning_rate = pass_dict['learning_rate']
     verbosity = pass_dict['verbosity']
     opt_type = pass_dict['opt_type']
+    train_data = pass_dict['train_data']
     config = Config(verbosity=verbosity)
     config.update_train_rate(learning_rate, opt_type)
     agent = AlphaZeroChess(config)
     redis_conn = redis.Redis(host=config.redis_host, port=config.redis_port, db=config.redis_db)
 
     agent.load_networks(network_name)
-    key_list = scan_redis_for_training_data(agent, 'azChess')
+    key_list = train_data['key_list']
+    states = train_data['states']
+    policy_targets = train_data['policy_targets']
+    value_targets = train_data['value_targets']
     # Get a list of keys and shuffle them
-
-    retrieved_data = []
-    states = []
-    policy_targets = []
-    value_targets = []
-    values = np.array(len(list(key_list)) * [0.0])
-
-    # Load and process the selected keys
-    for i, key in enumerate(list(key_list)):
-        retrieved_data.append(load_training_data(agent, key, config.verbosity))
-        states.append(retrieved_data[i]['state'])
-        policy_targets.append(retrieved_data[i]['policy_target'])
-        value_targets.append(retrieved_data[i]['value_target'])
-        values[i] = retrieved_data[i]['value_target']
 
     train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value = \
         split_data(config, key_list, states, policy_targets, value_targets)
@@ -63,7 +53,6 @@ def train_model(pass_dict):
                                                                         [val_states[j] for j in random_val_inds],
                                                                         [val_policy[j] for j in random_val_inds],
                                                                         [val_value[j] for j in random_val_inds])
-
 
         gc.collect()
         last_n_val_policy_losses.append(validation_loss_tot / validation_loss_cnt)

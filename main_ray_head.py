@@ -6,6 +6,7 @@ import time
 from config.config import Config
 from src_code.utils.utils import total_cpu_workers, total_gpu_workers
 from src_code.agent.agent import AlphaZeroChess, create_network
+from src_code.agent.utils import load_and_process_data
 from src_code.agent.self_play import play_games
 from src_code.agent.train import train_model
 from src_code.evaluate.evaluate import run_evaluation
@@ -114,6 +115,7 @@ if __name__ == '__main__':
         print(f'Executing train / game play iteration: {agent_ind} of {outer_config.eval_cycles - 1}')
         pre_eval_ind = 0
         pre_eval_result_ids = []
+        train_data = None
         running_tasks = []  # to store running tasks and their corresponding network_name_out values
         while pre_eval_ind < outer_config.train_play_games:
             print(f'Executing training step: {pre_eval_ind} of {outer_config.train_play_games - 1}')
@@ -122,6 +124,11 @@ if __name__ == '__main__':
             else:
                 network_name = 'network_current' + '_' + str(pre_eval_ind-1).zfill(5)
             network_name_out = 'network_current' + '_' + str(pre_eval_ind).zfill(5)
+
+            if pre_eval_ind % 5 == 0 or train_data is None:
+                print(f'retrieving redis game records...')
+                train_data = load_and_process_data(outer_agent, verbosity)
+
             train_params = dict()
             train_params['action'] = 'train'
             train_params['verbosity'] = verbosity
@@ -130,6 +137,7 @@ if __name__ == '__main__':
             train_params['learning_rate'] = learning_rate
             train_params['opt_type'] = opt_type
             train_params['run_type'] = 'ray'
+            train_params['train_data'] = train_data
             train_id = main_ray_gpu.remote(train_params)
 
             result = ray.get(train_id)
