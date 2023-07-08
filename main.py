@@ -56,7 +56,7 @@ def main(in_params):
         pass_dict['learning_rate'] = 0.2
         pass_dict['key_prefix'] = key_prefix
         pass_dict['num_iterations'] = num_iterations
-        pass_dict['network_name'] = 'network_current_00709'
+        pass_dict['network_name'] = 'network_current_00364'
         pass_dict['self_play_games'] = num_evals
         pass_dict['run_type'] = 'not_ray'
         pass_dict['pre_play'] = False

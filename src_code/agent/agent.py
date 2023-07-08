@@ -453,20 +453,20 @@ class MCTSTree:
         for child in node.children:
             node_visits += child.Nvisit
 
-        if node_visits == 0:
-            best_node = random.choice(node.children)
-        else:
-            indices = list(range(len(node.children)))
-            random.shuffle(indices)
-            for index in indices:
-                child = node.children[index]
-                # adj only applied to Qreward (not probabilities)
-                uct = (child.Qreward * adj) + c_puct * child.prior_prob * math.sqrt(
-                    node_visits + epsilon) / (1 + child.Nvisit)
+        # if node_visits == 0:
+        #    best_node = random.choice(node.children)
+        #else:
+        indices = list(range(len(node.children)))
+        random.shuffle(indices)
+        for index in indices:
+            child = node.children[index]
+            # adj only applied to Qreward (not probabilities)
+            uct = (child.Qreward * adj) + c_puct * child.prior_prob * math.sqrt(
+                node_visits + epsilon) / (1 + child.Nvisit)
 
-                if uct > max_uct:
-                    max_uct = uct
-                    best_node = child
+            if uct > max_uct:
+                max_uct = uct
+                best_node = child
 
         # Simulate a game from the best_node
         self.process_mcts(best_node, config, network, eval, pre_play)
