@@ -70,7 +70,7 @@ class AlphaZeroChess:
         """Get the best action to take given the current state of the board."""
         """Uses dirichlet noise to encourage exploration in place of temperature."""
         while self.sim_counter.get_count() < iters:
-            self.tree.process_mcts(self.tree.root, self.config, self.network, eval, pre_play)
+            _ = self.tree.process_mcts(self.tree.root, self.config, self.network, eval, pre_play)
             self.sim_counter.increment()
             if self.config.verbosity is True:
                 if self.sim_counter.get_count() % 100 == 0:
@@ -434,12 +434,23 @@ class MCTSTree:
             c_puct = self.config.c_puct
         epsilon = 1e-8
 
-        if node.game_over:
-            return
+        if node.board.is_game_over(claim_draw=True):
+            winner = node.board.result()
+            if winner == '1-0':
+                v = 1
+            elif winner == '0-1':
+                v = -1
+            elif winner == '1/2-1/2':
+                if node.player_to_move == 'white':
+                    v = -0
+                elif node.player_to_move == 'black':
+                    v = 0
+            return v
+
         # Select a node to expand
         if len(node.children) == 0:
-            self.expand(node, network, pre_play)
-            return
+            v = self.expand(node, network, pre_play)
+            return v
 
         # Evaluate the node
         max_uct = -float('inf')
@@ -469,13 +480,13 @@ class MCTSTree:
                 best_node = child
 
         # Simulate a game from the best_node
-        self.process_mcts(best_node, config, network, eval, pre_play)
+        v = self.process_mcts(best_node, config, network, eval, pre_play)
 
         # Backpropagate the results of the simulation
-        best_node.Qreward = (best_node.Qreward * best_node.Nvisit + best_node.prior_value) / (best_node.Nvisit + 1)
+        best_node.Qreward = (best_node.Qreward * best_node.Nvisit + v) / (best_node.Nvisit + 1)
         best_node.Nvisit += 1
 
-        return
+        return v
 
     # @profile
     def expand(self, leaf_node, network, pre_play):
@@ -499,9 +510,10 @@ class MCTSTree:
         state_ds_batched = state_ds.batch(1)
         pi, v = network.predict(state_ds_batched, verbose=0)
         if pre_play is False:
-            leaf_node.prior_value = v[0][0]
+            # v = v[0][0]
+            v = 0
         else:
-            leaf_node.prior_value = 0
+            v = 0
 
         # Add Dirichlet noise to the prior probabilities
         if leaf_node.name == 'root':
@@ -518,7 +530,7 @@ class MCTSTree:
         # Create list of legal policy probabilities corresponding to legal moves
         legal_probabilities = [pi[self.config.all_chess_moves.index(move)] for move in legal_moves]
 
-        del v, pi
+        del pi
 
         # Normalize the legal probabilities to sum to 1
         epsilon = 1e-8
@@ -539,24 +551,12 @@ class MCTSTree:
                 player_to_move = 'white'
             child = Node(new_board.copy(), name=action, player_to_move=player_to_move, prior_boards=new_prior_boards, prior_moves=new_prior_moves)
             child.set_parent(leaf_node)
-            if child.board.is_game_over(claim_draw=True):
-                winner = child.board.result()
-                child.game_over = True
-                if winner == '1-0':
-                    child.prior_value = 1
-                elif winner == '0-1':
-                    child.prior_value = -1
-                elif winner == '1/2-1/2':
-                    if child.parent.player_to_move == 'black':
-                        child.prior_value = -0
-                    elif child.parent.player_to_move == 'white':
-                        child.prior_value = 0
 
             child.prior_prob = legal_probabilities[i]
             leaf_node.children.append(child)
 
         del new_board, state, legal_moves, new_prior_boards, new_prior_moves
-        return
+        return v
 
     def update_root(self, action):
         for child in self.root.children:
@@ -622,7 +622,7 @@ class MCTSTree:
 
         all_nodes = self.root.get_all_nodes()
 
-        game_over_nodes = [node for node in all_nodes if node.game_over]
+        game_over_nodes = [node for node in all_nodes if node.board.is_game_over(claim_draw=True)]
         shortest_paths = self.find_shortest_paths_to_game_over_by_tree()
 
         most_visited_nodes = sorted(all_nodes, key=lambda node: node.Nvisit, reverse=True)[:5]
@@ -654,7 +654,7 @@ class MCTSTree:
             print(f"Node: {node.path_from_root()}, Qreward: {node.Qreward:.3f}")
 
     def find_shortest_paths_to_game_over_by_tree(self):
-        game_over_nodes = [node for node in self.root.get_all_nodes() if node.game_over]
+        game_over_nodes = [node for node in self.root.get_all_nodes() if node.board.is_game_over(claim_draw=True)]
 
         if not game_over_nodes:
             return []
@@ -684,8 +684,8 @@ def policy_to_prob_array(policy, legal_moves, all_moves_list):
 
 
 class Node:
-    __slots__ = 'board', 'Qreward', 'Nvisit', 'prior_prob', 'prior_value', 'children', 'player_to_move', \
-                'parent', 'game_over', 'name', 'prior_boards', 'prior_moves'
+    __slots__ = 'board', 'Qreward', 'Nvisit', 'prior_prob', 'children', 'player_to_move', \
+                'parent', 'name', 'prior_boards', 'prior_moves'
     all_nodes = set()
 
     def __init__(self, board, player_to_move='white', name='root', prior_boards=None, prior_moves=None):
@@ -693,11 +693,9 @@ class Node:
         self.Qreward = 0
         self.Nvisit = 0
         self.prior_prob = 0
-        self.prior_value = 0
         self.children = []
         self.player_to_move = player_to_move
         self.parent = None
-        self.game_over = False
         self.name = name
         if prior_boards is None:
             self.prior_boards = [None] * 7
@@ -714,11 +712,9 @@ class Node:
         del self.board
         del self.children
         del self.parent
-        del self.game_over
         del self.Qreward
         del self.Nvisit
         del self.prior_prob
-        del self.prior_value
         del self.name
         del self.player_to_move
         del self.prior_boards
@@ -778,7 +774,7 @@ class Node:
         most_valuable_nodes = sorted_nodes[:5]  # Top 5 nodes
         least_valuable_nodes = sorted_nodes[-5:]  # Bottom 5 nodes
 
-        game_over_nodes = [node for node in cls.all_nodes if node.game_over]
+        game_over_nodes = [node for node in cls.all_nodes if node.board.is_game_over(claim_draw=True)]
         shortest_paths = cls.find_shortest_paths_to_game_over()
 
         most_visited_nodes = sorted(cls.all_nodes, key=lambda node: node.Nvisit, reverse=True)[:5]
@@ -830,7 +826,7 @@ class Node:
 
     @classmethod
     def find_shortest_paths_to_game_over(cls):
-        game_over_nodes = [node for node in cls.all_nodes if node.game_over]
+        game_over_nodes = [node for node in cls.all_nodes if node.board.is_game_over(claim_draw=True)]
 
         if not game_over_nodes:
             return []

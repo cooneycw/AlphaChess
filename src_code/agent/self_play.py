@@ -50,21 +50,21 @@ def play_games(pass_dict):
 
         if run_type != 'ray':
             # Collect all prior values and node names from nodes
-            prior_values = [(node.name, node.prior_value) for node in
+            prior_values = [(node.name, node.prior_prob, node.Qreward, node.Nvisit) for node in
                             list(agent.tree.root.children)]
 
             # Sort the prior values in ascending order
-            sorted_values = sorted(prior_values, key=lambda x: x[1])
+            sorted_values = sorted(prior_values, key=lambda x: x[2])
 
             # Display the bottom 10 nodes (lowest prior values)
             print("Bottom 10 nodes:")
-            for name, value in sorted_values[:10]:
-                print(f"Node: {name}, Prior Value: {value}")
+            for name, prob, qreward, nvisit in sorted_values[:10]:
+                print(f"Node: {name} Prior Prob: {prob:.4f} Qreward: {qreward:.4f} Nvisits: {nvisit}")
 
             # Display the top 10 nodes (highest prior values)
             print("\nTop 10 nodes:")
-            for name, value in sorted_values[-10:]:
-                print(f"Node: {name}, Prior Value: {value}")
+            for name, prob, qreward, nvisit in sorted_values[-10:]:
+                print(f"Node: {name} Prior Prob: {prob:.4f} Qreward: {qreward:.4f} Nvisits: {nvisit}")
 
         agent.board.push_uci(uci_move)
 

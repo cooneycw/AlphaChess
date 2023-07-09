@@ -125,7 +125,7 @@ if __name__ == '__main__':
                 network_name = 'network_current' + '_' + str(pre_eval_ind-1).zfill(5)
             network_name_out = 'network_current' + '_' + str(pre_eval_ind).zfill(5)
 
-            if pre_eval_ind % 5 == 0 or train_data is None:
+            if pre_eval_ind % 8 == 0 or train_data is None:
                 print(f'retrieving redis game records...')
                 train_data = load_and_process_data(outer_agent, verbosity)
 

@@ -184,7 +184,7 @@ def input_to_board(input_tensor):
     return board_list, move_list, current_play_summary
 
 
-def load_and_process_data(agent, verbosity, batch_size=1000):
+def load_and_process_data(agent, verbosity, batch_size=5000):
     data_dict = {
         'states': [],
         'policy_targets': [],
