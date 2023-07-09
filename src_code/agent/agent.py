@@ -510,8 +510,7 @@ class MCTSTree:
         state_ds_batched = state_ds.batch(1)
         pi, v = network.predict(state_ds_batched, verbose=0)
         if pre_play is False:
-            # v = v[0][0]
-            v = 0
+            v = v[0][0]
         else:
             v = 0
 
