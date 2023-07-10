@@ -445,6 +445,9 @@ class MCTSTree:
                     v = -0
                 elif node.player_to_move == 'black':
                     v = 0
+            else:
+                print(f'Here is the unknown winner code: {winner}')
+                v = 0
             return v
 
         # Select a node to expand
