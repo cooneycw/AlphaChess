@@ -440,13 +440,13 @@ class MCTSTree:
                 v = 1
             elif winner == '0-1':
                 v = -1
-            elif winner == '1/2-1/2':
+            elif winner == '1/2-1/2' or winner == '*':
                 if node.player_to_move == 'white':
                     v = -0
                 elif node.player_to_move == 'black':
                     v = 0
             else:
-                print(f'Here is the unknown winner code: {winner}')
+                print(f'Here is an unknown code: {winner}')
                 v = 0
             return v
 
