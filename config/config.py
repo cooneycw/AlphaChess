@@ -24,13 +24,13 @@ class Config:
         self.train_play_games = 1000
         self.eval_cycles = 300
         self.game_keys_limit = 500000
-        self.num_iterations = 500
-        self.eval_num_iterations = 500
+        self.num_iterations = 800
+        self.eval_num_iterations = 800
         self.preplay_num_iterations = 60
         self.play_iterations = 40
         self.num_evaluation_games = 400
-        self.reset_redis = False
-        self.reset_network = False
+        self.reset_redis = True
+        self.reset_network = True
         self.training_sample = 4600
         self.training_samples = 1
         self.early_stopping_epochs = 1
@@ -42,7 +42,7 @@ class Config:
         self.eval_c_puct = 1.0
         self.optimizer = None
         self.weight_decay = 0.00001
-        self.max_gradient_norm = 0.9
+        self.max_gradient_norm = 1.15
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter
