@@ -57,7 +57,7 @@ def run_evaluation(in_params):
 
         board.push_uci(uci_move)
         move_cnt += 1
-        if move_cnt > 20:
+        if move_cnt > agent_current.temperature_threshold:
             agent_current.update_temperature()
             agent_candidate.update_temperature()
         old_node_list_current = agent_current.tree.root.get_all_nodes()

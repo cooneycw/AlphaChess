@@ -79,7 +79,7 @@ class AlphaZeroChess:
 
         # retrieve the updated policy
         policy, policy_uci, temp_adj_policy, policy_array = self.tree.get_policy(self)
-
+        print(f'max adj: {max(temp_adj_policy)}  sum_adj: {sum(temp_adj_policy)}  max_pol: {max(policy)}  sum_pol: {sum(policy)}  temp: {self.temperature}')
         comparator = np.random.rand()
         cumulative_prob = 0
         for i in range(len(temp_adj_policy)):  # len(temp_adj_policy)
