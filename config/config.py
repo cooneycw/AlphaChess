@@ -38,8 +38,8 @@ class Config:
         self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.3  # Starting value for alpha
         self.eps = 0.25  # Starting value for eps
-        self.c_puct = 2.5
-        self.eval_c_puct = 2.5
+        self.c_puct = 4
+        self.eval_c_puct = 4
         self.optimizer = None
         self.weight_decay = 0.00001
         self.max_gradient_norm = 1.15

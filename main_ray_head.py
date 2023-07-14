@@ -52,7 +52,7 @@ if __name__ == '__main__':
     verbosity = False
 
     outer_config = Config(verbosity=verbosity)
-    learning_rate = 0.00030
+    learning_rate = 0.001
     opt_type = 'adamax'
     # play seed games
     outer_agent = AlphaZeroChess(outer_config, network=None)

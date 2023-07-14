@@ -57,13 +57,13 @@ def play_games(pass_dict):
             sorted_values = sorted(prior_values, key=lambda x: x[2])
 
             # Display the bottom 10 nodes (lowest prior values)
-            print("Bottom 10 nodes:")
-            for name, prob, qreward, nvisit in sorted_values[:10]:
+            print("Bottom 15 nodes:")
+            for name, prob, qreward, nvisit in sorted_values[:15]:
                 print(f"Node: {name} Prior Prob: {prob:.4f} Qreward: {qreward:.4f} Nvisits: {nvisit}")
 
             # Display the top 10 nodes (highest prior values)
-            print("\nTop 10 nodes:")
-            for name, prob, qreward, nvisit in sorted_values[-10:]:
+            print("\nTop 15 nodes:")
+            for name, prob, qreward, nvisit in sorted_values[-15:]:
                 print(f"Node: {name} Prior Prob: {prob:.4f} Qreward: {qreward:.4f} Nvisits: {nvisit}")
 
         agent.board.push_uci(uci_move)

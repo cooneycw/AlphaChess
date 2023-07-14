@@ -530,13 +530,19 @@ class MCTSTree:
         legal_moves = get_legal_moves(leaf_node.board.copy())
 
         # Create list of legal policy probabilities corresponding to legal moves
-        legal_probabilities = [pi[self.config.all_chess_moves.index(move)] for move in legal_moves]
+        epsilon = 1e-8
+        ep_threshold = 20 * epsilon
+
+        legal_probabilities = np.array([pi[self.config.all_chess_moves.index(move)] for move in legal_moves],
+                                       dtype=np.float64)
+        if sum(legal_probabilities) < ep_threshold:
+            legal_probabilities = np.ones(len(legal_moves)) / len(legal_moves)
+        else:
+            legal_probabilities /= (np.sum(legal_probabilities) + epsilon)
 
         del pi
 
         # Normalize the legal probabilities to sum to 1
-        epsilon = 1e-8
-        legal_probabilities /= (np.sum(legal_probabilities) + epsilon)
 
         for i, action in enumerate(legal_moves):
             new_prior_moves = copy.deepcopy(leaf_node.prior_moves)
