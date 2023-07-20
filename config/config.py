@@ -16,10 +16,10 @@ class Config:
         self.num_epochs = 1
         self.validation_split = 0.1
         self.batch_size = 32
-        self.maximum_moves = 150
+        self.maximum_moves = 180
         self.temperature = 1
         self.min_temperature = 0.01
-        self.temperature_threshold = 150
+        self.temperature_threshold = self.maximum_moves
         self.initial_seed_games = 750
         self.train_play_games = 1000
         self.eval_cycles = 300
@@ -38,11 +38,11 @@ class Config:
         self.action_space_size = 4096 + 176
         self.dirichlet_alpha = 0.3  # Starting value for alpha
         self.eps = 0.25  # Starting value for eps
-        self.c_puct = 4
-        self.eval_c_puct = 4
+        self.c_puct = 1.5
+        self.eval_c_puct = 1.5
         self.optimizer = None
         self.weight_decay = 0.00001
-        self.max_gradient_norm = 1.15
+        self.max_gradient_norm = 1.25
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter
