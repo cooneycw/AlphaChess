@@ -8,7 +8,7 @@ def leaky_relu(x, alpha=0.2):
     return tf.maximum(x, alpha * x)
 
 
-def residual_block(x, filters, block_idx, l1, l2, dropout_rate):
+def residual_block(x, filters, block_idx, l1, l2, rb_dropout_rate=0.10):
     y = Conv2D(filters, kernel_size=3, padding='same', kernel_regularizer=l1_l2(l1=l1, l2=l2), name=f'res_conv1_block{block_idx}')(x)
     y = BatchNormalization(name=f'res_bn1_block{block_idx}')(y)
     y = Activation(leaky_relu, name=f'res_leakyrelu1_block{block_idx}')(y)
@@ -16,6 +16,8 @@ def residual_block(x, filters, block_idx, l1, l2, dropout_rate):
     y = BatchNormalization(name=f'res_bn2_block{block_idx}')(y)
     y = Add(name=f'res_add_block{block_idx}')([x, y])
     y = Activation(leaky_relu, name=f'res_leakyrelu2_block{block_idx}')(y)
+    if rb_dropout_rate is not None:
+        y = Dropout(rb_dropout_rate)(y)
     return y
 
 
@@ -36,7 +38,8 @@ def create_network(config, l1=0.00001, l2=0.000001, dropout_rate=0.5):
     v = BatchNormalization(name='value_bn')(v)
     v = Activation(leaky_relu, name='value_leakyrelu')(v)
     v = Flatten(name='value_flatten')(v)
-    v = Dense(256, activation='relu', kernel_initializer='glorot_uniform', name='value_dense1')(v)
+    v = Dense(128, activation=leaky_relu(), kernel_initializer='glorot_uniform', name='value_dense1')(v)
+    v = Dropout(dropout_rate)(v)
     v = Dense(1, activation='tanh', kernel_initializer='glorot_uniform', name='value_dense2')(v)
 
     # Policy head
