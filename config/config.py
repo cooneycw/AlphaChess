@@ -42,7 +42,7 @@ class Config:
         self.eval_c_puct = 1.5
         self.optimizer = None
         self.weight_decay = 0.00001
-        self.max_gradient_norm = 1.25
+        self.max_gradient_norm = 1.15
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter
