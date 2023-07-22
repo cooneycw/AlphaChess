@@ -131,10 +131,10 @@ class AlphaZeroChess:
                 gradients = tape.gradient(loss, self.network.trainable_variables)
 
                 # Apply gradient clipping
-                clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.config.max_gradient_norm)
+                # clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.config.max_gradient_norm)
 
                 # Update the model parameters with clipped gradients
-                self.optimizer.apply_gradients(zip(clipped_gradients, self.network.trainable_variables))
+                self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
 
                 avg_train_loss += loss
                 value_mae = tf.reduce_mean(
