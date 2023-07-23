@@ -531,7 +531,7 @@ class MCTSTree:
 
         # Create list of legal policy probabilities corresponding to legal moves
         epsilon = 1e-8
-        ep_threshold = 20 * epsilon
+        ep_threshold = 0.002
 
         legal_probabilities = np.array([pi[self.config.all_chess_moves.index(move)] for move in legal_moves],
                                        dtype=np.float64)
