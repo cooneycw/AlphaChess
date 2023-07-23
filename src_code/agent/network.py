@@ -26,12 +26,12 @@ def create_network(config, l1=0, l2=0.000001, dropout_rate=0.3):
     inputs = Input(shape=(config.board_size, config.board_size, config.num_channels), name='input')
 
     # Residual blocks
-    x = Conv2D(512, kernel_size=3, padding='same', kernel_regularizer=l1_l2(l1=l1, l2=l2), name='conv1')(inputs)
+    x = Conv2D(384, kernel_size=3, padding='same', kernel_regularizer=l1_l2(l1=l1, l2=l2), name='conv1')(inputs)
     x = BatchNormalization(name='bn1')(x)
     x = Activation(leaky_relu, name='leakyrelu1')(x)
     for i in range(18):
         blk_idx = i + 1
-        x = residual_block(x, 512, blk_idx, l1, l2, dropout_rate)
+        x = residual_block(x, 384, blk_idx, l1, l2, dropout_rate)
 
     # Value head
     v = Conv2D(1, kernel_size=1, padding='same',kernel_regularizer=l1_l2(l1=l1, l2=l2), name='value_conv')(x)
