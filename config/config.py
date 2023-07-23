@@ -15,12 +15,12 @@ class Config:
         # Training settings
         self.num_epochs = 1
         self.validation_split = 0.1
-        self.batch_size = 32
+        self.batch_size = 64
         self.maximum_moves = 180
         self.temperature = 1
         self.min_temperature = 0.01
         self.temperature_threshold = self.maximum_moves
-        self.initial_seed_games = 750
+        self.initial_seed_games = 250
         self.train_play_games = 1000
         self.eval_cycles = 300
         self.game_keys_limit = 250000
