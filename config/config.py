@@ -14,13 +14,13 @@ class Config:
         self.redis_db = 0
         # Training settings
         self.num_epochs = 1
-        self.validation_split = 0.1
+        self.validation_split = 0.05
         self.batch_size = 64
         self.maximum_moves = 150
         self.temperature = 1
         self.min_temperature = 0.01
         self.temperature_threshold = self.maximum_moves
-        self.initial_seed_games = 250
+        self.initial_seed_games = 2000
         self.train_play_games = 1000
         self.eval_cycles = 300
         self.game_keys_limit = 250000
@@ -31,7 +31,7 @@ class Config:
         self.num_evaluation_games = 400
         self.reset_redis = True
         self.reset_network = True
-        self.training_sample = 4600
+        self.training_sample = 4600 * 4
         self.training_samples = 1
         self.early_stopping_epochs = 1
         self.reward_discount = 1.00
@@ -39,10 +39,10 @@ class Config:
         self.dirichlet_alpha = 0.3  # Starting value for alpha
         self.eps = 0.25  # Starting value for eps
         self.c_puct = 1.5
-        self.eval_c_puct = 1.5
+        self.eval_c_puct = 1.2
         self.optimizer = None
         self.weight_decay = 0.00001
-        self.max_gradient_norm = 0.8
+        self.max_gradient_norm = 1.0
         self.verbosity = verbosity
         self.SimCounter = SimulationCounter
         self.MoveCounter = MoveCounter
