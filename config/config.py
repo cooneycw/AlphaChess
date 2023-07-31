@@ -15,12 +15,12 @@ class Config:
         # Training settings
         self.num_epochs = 1
         self.validation_split = 0.05
-        self.batch_size = 64
+        self.batch_size = 16
         self.maximum_moves = 150
         self.temperature = 1
         self.min_temperature = 0.01
         self.temperature_threshold = self.maximum_moves
-        self.initial_seed_games = 2000
+        self.initial_seed_games = 200
         self.train_play_games = 1000
         self.eval_cycles = 300
         self.game_keys_limit = 250000
@@ -29,9 +29,11 @@ class Config:
         self.preplay_num_iterations = 60
         self.play_iterations = 40
         self.num_evaluation_games = 400
-        self.reset_redis = False
+        self.reset_redis = True
         self.reset_network = True
-        self.training_sample = 4600 * 4
+        self.initial_epochs = 64
+        self.initial_early_stopping_epochs = 16
+        self.training_sample = 4600 * 1
         self.training_samples = 1
         self.early_stopping_epochs = 1
         self.reward_discount = 1.00

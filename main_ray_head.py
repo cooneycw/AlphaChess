@@ -107,6 +107,21 @@ if __name__ == '__main__':
         print(f'Seed cycle completed.  Awaiting seed self-play completion.  Regular training follows.')
         results = [ray.get(result) for result in seed_results]
 
+        # preliminary training of network_current
+        train_data = load_and_process_data(outer_agent, verbosity)
+
+        train_params = dict()
+        train_params['action'] = 'train'
+        train_params['verbosity'] = verbosity
+        train_params['network_name'] = 'network_current'
+        train_params['network_name_out'] = 'network_current'
+        train_params['learning_rate'] = learning_rate
+        train_params['opt_type'] = opt_type
+        train_params['run_type'] = 'ray'
+        train_params['initial'] = True
+        train_params['train_data'] = train_data
+        train_id = main_ray_gpu.remote(train_params)
+
     agent_ind = 0
     while agent_ind < outer_config.eval_cycles:
         if agent_ind % 42 == 0 and agent_ind != 0:
@@ -137,6 +152,7 @@ if __name__ == '__main__':
             train_params['learning_rate'] = learning_rate
             train_params['opt_type'] = opt_type
             train_params['run_type'] = 'ray'
+            train_params['initial'] = False
             train_params['train_data'] = train_data
             train_id = main_ray_gpu.remote(train_params)
 
