@@ -20,7 +20,7 @@ class Config:
         self.temperature = 1
         self.min_temperature = 0.01
         self.temperature_threshold = self.maximum_moves
-        self.initial_seed_games = 200
+        self.initial_seed_games = 1500
         self.train_play_games = 1000
         self.eval_cycles = 300
         self.game_keys_limit = 250000

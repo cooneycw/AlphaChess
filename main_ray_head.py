@@ -122,6 +122,8 @@ if __name__ == '__main__':
         train_params['train_data'] = train_data
         train_id = main_ray_gpu.remote(train_params)
 
+        result = ray.get(train_id)
+
     agent_ind = 0
     while agent_ind < outer_config.eval_cycles:
         if agent_ind % 42 == 0 and agent_ind != 0:

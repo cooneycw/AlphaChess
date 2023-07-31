@@ -95,7 +95,7 @@ class AlphaZeroChess:
     def game_over(self):
         return self.board.is_game_over(claim_draw=True)
 
-    def update_network(self, train_states, train_policy, train_value, val_states, val_policy, val_value):
+    def update_network(self, initial, train_states, train_policy, train_value, val_states, val_policy, val_value):
         """Update the neural network with the latest training data."""
         # Split the data into training and validation sets
         train_dataset = self.config.ChessDataset(train_states, train_policy, train_value)
@@ -108,7 +108,12 @@ class AlphaZeroChess:
             self.config.batch_size)
         validation_loss_tot = 0
         validation_loss_cnt = 0
-        for epoch in range(self.config.num_epochs):
+        num_epochs = None
+        if initial:
+            num_epochs = self.config.initial_epochs
+        else:
+            num_epochs = self.config.num_epochs
+        for epoch in range(num_epochs):
             avg_train_loss = 0
             avg_train_accuracy = 0
             avg_train_value_mae = 0

@@ -29,7 +29,7 @@ def train_model(pass_dict):
     value_targets = train_data['value_targets']
     # Get a list of keys and shuffle them
 
-    print(f'splitting records for test / train...')
+    print(f'splitting records for test / train.  Initial: {initial}  Key_list length: {len(key_list)}')
     train_key_list, val_key_list, train_states, val_states, train_policy, val_policy, train_value, val_value = \
         split_data(config, key_list, states, policy_targets, value_targets)
 
@@ -39,37 +39,21 @@ def train_model(pass_dict):
     key_del_list = set()
 
     if initial:
-        for k in range(config.initial_epochs):
-            win_abs_ratio = np.sum(np.abs([train_value[ii] for ii in range(len(train_value))])) / len(train_value)
-            win_ratio = np.sum([train_value[ii] for ii in range(len(train_value))]) / len(train_value)
 
-            print(f'Epoch: {k}  Sum of values: {np.sum([train_value[ii] for ii in range(len(train_value))])}  Win Absolute Ratio: {int(100 * (0.005 + win_abs_ratio))}%  Win Ratio: {int(100 * (0.005 + win_ratio))}%')
+        win_abs_ratio = np.sum(np.abs([train_value[ii] for ii in range(len(train_value))])) / len(train_value)
+        win_ratio = np.sum([train_value[ii] for ii in range(len(train_value))]) / len(train_value)
 
-            validation_loss_tot, validation_loss_cnt = agent.update_network([train_states[ii] for ii in range(len(train_states))],
-                                                                            [train_policy[ii] for ii in range(len(train_policy))],
-                                                                            [train_value[ii] for ii in range(len(train_value))],
-                                                                            [val_states[jj] for jj in range(len(val_states))],
-                                                                            [val_policy[jj] for jj in range(len(val_policy))],
-                                                                            [val_value[jj] for jj in range(len(val_value))])
+        print(f'Sum of values: {np.sum([train_value[ii] for ii in range(len(train_value))])}  Win Absolute Ratio: {int(100 * (0.005 + win_abs_ratio))}%  Win Ratio: {int(100 * (0.005 + win_ratio))}%')
 
-            last_n_val_policy_losses.append(validation_loss_tot / validation_loss_cnt)
+        _, _ = agent.update_network(initial,
+                                    [train_states[ii] for ii in range(len(train_states))],
+                                    [train_policy[ii] for ii in range(len(train_policy))],
+                                    [train_value[ii] for ii in range(len(train_value))],
+                                    [val_states[jj] for jj in range(len(val_states))],
+                                    [val_policy[jj] for jj in range(len(val_policy))],
+                                    [val_value[jj] for jj in range(len(val_value))])
 
-            if len(last_n_val_policy_losses) > config.initial_early_stopping_epochs:
-                last_n_val_policy_losses.pop(0)  # Remove the oldest validation loss
-
-            if len(last_n_val_policy_losses) >= config.initial_early_stopping_epochs:
-                if last_n_val_policy_losses[-1] < best_policy_val:
-                    best_policy_val = last_n_val_policy_losses[-1]
-                    agent.save_networks('network_best_candidate')
-                    best_set = True
-
-            # Check if validation loss has not decreased for 'early_stopping_epochs' consecutive epochs
-            if len(last_n_val_policy_losses) == config.early_stopping_epochs and all(
-                    x <= last_n_val_policy_losses[-1] for x
-                    in last_n_val_policy_losses[:-1]):
-                print(f"Early stopping triggered at training episode {k}")
-                break
-            gc.collect()
+        gc.collect()
 
         if best_set is False:
             agent.save_networks('network_best_candidate')
@@ -77,6 +61,7 @@ def train_model(pass_dict):
         # Format the datetime as separate columns for date and time
         agent.load_networks('network_best_candidate')
         agent.save_networks(network_name_out)
+        print(f'Saving initial network update to network: {network_name_out}')
 
         gc.collect()
 
@@ -93,7 +78,8 @@ def train_model(pass_dict):
             print(f'Sample: {j+1} of {config.training_samples}  Sampled {len(random_train_inds)} training records and {len(random_val_inds)} validation records')
             print(f'Sum of values: {np.sum([train_value[i] for i in random_train_inds])}  Win Absolute Ratio: {int(100 * (0.005 + win_abs_ratio))}%  Win Ratio: {int(100 * (0.005 + win_ratio))}%')
 
-            validation_loss_tot, validation_loss_cnt = agent.update_network([train_states[i] for i in random_train_inds],
+            validation_loss_tot, validation_loss_cnt = agent.update_network(initial,
+                                                                            [train_states[i] for i in random_train_inds],
                                                                             [train_policy[i] for i in random_train_inds],
                                                                             [train_value[i] for i in random_train_inds],
                                                                             [val_states[j] for j in random_val_inds],
