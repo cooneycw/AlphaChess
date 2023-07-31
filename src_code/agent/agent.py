@@ -516,7 +516,7 @@ class MCTSTree:
             v = v[0][0]
         else:
             v = 0
-            pi = pi * 0
+            pi = (pi * 0) + (1/len(pi[0]))
 
         # Add Dirichlet noise to the prior probabilities
         if leaf_node.name == 'root':
