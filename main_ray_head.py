@@ -107,6 +107,7 @@ if __name__ == '__main__':
         print(f'Seed cycle completed.  Awaiting seed self-play completion.  Regular training follows.')
         results = [ray.get(result) for result in seed_results]
 
+    if outer_config.reset_initial is True:
         # preliminary training of network_current
         train_data = load_and_process_data(outer_agent, verbosity)
 
