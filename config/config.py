@@ -15,7 +15,7 @@ class Config:
         # Training settings
         self.num_epochs = 1
         self.validation_split = 0.05
-        self.batch_size = 16
+        self.batch_size = 48
         self.maximum_moves = 150
         self.temperature = 1
         self.min_temperature = 0.01
@@ -29,10 +29,10 @@ class Config:
         self.preplay_num_iterations = 300
         self.play_iterations = 40
         self.num_evaluation_games = 400
-        self.reset_redis = True
+        self.reset_redis = False
         self.reset_network = True
         self.reset_initial = True
-        self.initial_epochs = 64
+        self.initial_epochs = 16
         self.initial_early_stopping_epochs = 16
         self.training_sample = 4600 * 1
         self.training_samples = 1

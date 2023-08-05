@@ -191,6 +191,7 @@ class AlphaZeroChess:
             print(f'Train Loss: {avg_train_loss:.4f}, Train Accuracy: {avg_train_accuracy:.4f}, Val Loss: {avg_val_loss:.4f}, Val Accuracy: {avg_val_accuracy:.4f}')
             print(f'Train Value MAE: {avg_train_value_mae:.4f}, Val Value MAE: {avg_val_value_mae:.4f}')
 
+        gc.collect()
         return validation_loss_tot, validation_loss_cnt
 
     def load_network_weights(self, key_name):
