@@ -9,6 +9,7 @@ import pickle
 import numpy as np
 import requests
 import json
+import time
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.python.compiler.tensorrt import trt_convert as trt
@@ -190,6 +191,8 @@ class AlphaZeroChess:
             print(f'Epoch: {epoch+1} Train Batches: {num_train_batches}  Val Batches: {num_val_batches}')
             print(f'Train Loss: {avg_train_loss:.4f}, Train Accuracy: {avg_train_accuracy:.4f}, Val Loss: {avg_val_loss:.4f}, Val Accuracy: {avg_val_accuracy:.4f}')
             print(f'Train Value MAE: {avg_train_value_mae:.4f}, Val Value MAE: {avg_val_value_mae:.4f}')
+            if initial and (epoch % 5 == 0 and epoch != 0):
+                time.sleep(60)
 
         gc.collect()
         return validation_loss_tot, validation_loss_cnt
