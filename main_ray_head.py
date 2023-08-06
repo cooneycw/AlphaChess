@@ -121,8 +121,8 @@ if __name__ == '__main__':
         train_params['run_type'] = 'ray'
         train_params['initial'] = True
         train_params['train_data'] = train_data
-        train_id = main_ray_gpu.remote(train_params)
 
+        train_id = main_ray_no_gpu.remote(train_params)
         result = ray.get(train_id)
 
     agent_ind = 0
